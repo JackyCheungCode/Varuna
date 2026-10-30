@@ -37,7 +37,7 @@ The following providers are registered in the catalog and can be securely config
 - Alibaba.com, 1688, Taobao/Tmall TOP, JD Open Platform, Pinduoduo Open Platform
 - Bing Search, Baidu Marketing
 - X API, Bilibili, TikTok Research API, Xiaohongshu partner access, Douyin Open Platform
-- Google Trends, Similarweb, Semrush, Ahrefs
+- Google Trends, Similarweb, Semrush, Ahrefs, licensed pricing/promotion intelligence feeds
 - Trade/customs datasets, standards/certification registries, company intelligence
 - Authorized review imports, supplier quote imports, first-party business data imports
 

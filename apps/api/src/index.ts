@@ -109,6 +109,30 @@ function parseModelJSON(text){
  const cleaned=String(text||"").trim().replace(/^\`\`\`(?:json)?\s*/i,"").replace(/\s*\`\`\`$/,"");
  return JSON.parse(cleaned);
 }
+function normalizeProductAttribute(key,value,unit){
+ const raw=typeof value==="string"?value.trim():value;
+ const rawText=String(value);
+ const rawUnit=typeof unit==="string"?unit.trim():null;
+ const numericOnly=typeof value==="number"&&Number.isFinite(value)?value:(typeof value==="string"&&/^\s*-?\d+(?:[.,]\d+)?\s*$/.test(value)?Number(value.replace(",",".")):null);
+ let valueNumeric=null,valueText=typeof raw==="string"?raw.slice(0,1000):typeof raw==="boolean"?String(raw):null,canonicalUnit=rawUnit;
+ const matchUnit=(pattern)=>rawText.match(pattern);
+ if(key==="charging_power"){
+  const m=matchUnit(/(-?\d+(?:\.\d+)?)\s*(kw|w|watts?)\b/i);const n=m?Number(m[1]):numericOnly;const u=(m?.[2]||rawUnit||"").toLowerCase();
+  if(Number.isFinite(n)&&u){valueNumeric=u==="kw"?n*1000:n;canonicalUnit="W";valueText=null;}
+ }else if(key==="data_rate"){
+  const m=matchUnit(/(-?\d+(?:\.\d+)?)\s*(tbps|gbps|mbps|kbps|tb\/s|gb\/s|mb\/s|kb\/s)\b/i);const n=m?Number(m[1]):numericOnly;const u=(m?.[2]||rawUnit||"").toLowerCase();
+  const factors={tbps:1000000,"tb/s":1000000,gbps:1000,"gb/s":1000,mbps:1,"mb/s":1,kbps:0.001,"kb/s":0.001};
+  if(Number.isFinite(n)&&factors[u]!==undefined){valueNumeric=n*factors[u];canonicalUnit="Mbps";valueText=null;}
+ }else if(key==="length"){
+  const m=matchUnit(/(-?\d+(?:\.\d+)?)\s*(mm|cm|m|in|inch(?:es)?)\b/i);const n=m?Number(m[1]):numericOnly;const u=(m?.[2]||rawUnit||"").toLowerCase();
+  const factors={mm:1,cm:10,m:1000,in:25.4,inch:25.4,inches:25.4};
+  if(Number.isFinite(n)&&factors[u]!==undefined){valueNumeric=n*factors[u];canonicalUnit="mm";valueText=null;}
+ }else if(key==="rating"||key==="review_count"||key==="price"){
+  if(numericOnly!==null){valueNumeric=key==="review_count"?Math.max(0,Math.round(numericOnly)):numericOnly;valueText=null;}
+ }
+ if(key==="e_marker"&&(typeof value==="boolean"||/^(yes|no|true|false)$/i.test(rawText))){valueText=/^(yes|true)$/i.test(rawText)?"true":"false";}
+ return {value_text:valueText,value_numeric:valueNumeric,unit:canonicalUnit,normalized_value:{raw_value:value,raw_unit:rawUnit,normalized_numeric:valueNumeric,normalized_unit:canonicalUnit}};
+}
 
 export default {
  async fetch(request,env){
@@ -449,7 +473,8 @@ export default {
      if(!attr||typeof attr.key!=="string"||!allowedAttributeKeys.has(attr.key)||attr.value===undefined||attr.value===null)continue;
      const evidenceIds=Array.isArray(attr.evidence_observation_ids)?attr.evidence_observation_ids.filter(id=>allowedObservationIds.has(id)):[];if(!evidenceIds.length)continue;
      for(const evidenceId of evidenceIds.slice(0,5)){
-      records.push({workspace_id,project_id,product_id:saved.id,attribute_key:attr.key.slice(0,100),value_text:typeof attr.value==="string"?attr.value.slice(0,1000):typeof attr.value==="boolean"?String(attr.value):null,value_numeric:typeof attr.value==="number"&&Number.isFinite(attr.value)?attr.value:null,unit:typeof attr.unit==="string"?attr.unit.slice(0,40):null,normalized_value:typeof attr.value==="object"?attr.value:null,evidence_observation_id:evidenceId,evidence_source_id:observations.find(o=>o.id===evidenceId)?.source_id||null,extraction_method:"ai_evidence_extraction",confidence:Math.min(1,Math.max(0,attr.confidence!==null&&attr.confidence!==undefined&&Number.isFinite(Number(attr.confidence))?Number(attr.confidence):0.5))});
+      const normalized=normalizeProductAttribute(attr.key,attr.value,attr.unit);
+      records.push({workspace_id,project_id,product_id:saved.id,attribute_key:attr.key.slice(0,100),value_text:normalized.value_text,value_numeric:normalized.value_numeric,unit:normalized.unit,normalized_value:normalized.normalized_value,evidence_observation_id:evidenceId,evidence_source_id:observations.find(o=>o.id===evidenceId)?.source_id||null,extraction_method:"ai_evidence_extraction",confidence:Math.min(1,Math.max(0,attr.confidence!==null&&attr.confidence!==undefined&&Number.isFinite(Number(attr.confidence))?Number(attr.confidence):0.5))});
      }
     }
     if(records.length){const ar=await db(request,env,auth.token,"product_attribute_values?on_conflict=product_id,attribute_key,evidence_observation_id,extraction_method","POST",records,"resolution=merge-duplicates,return=representation");if(ar.ok)attributeCount+=(await ar.json()).length;}

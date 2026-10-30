@@ -16,3 +16,18 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
+
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate Worker module syntax
+        run: |
+          cp apps/api/src/index.ts /tmp/varuna-worker.mjs
+          node --check /tmp/varuna-worker.mjs
+      - name: Validate Wrangler configuration JSONC
+        run: |
+          node -e "const fs=require('fs'); const text=fs.readFileSync('apps/api/wrangler.jsonc','utf8').replace(/\/\*[\s\S]*?\*\//g,'').replace(/,\s*([}\]])/g,'$1'); JSON.parse(text);"

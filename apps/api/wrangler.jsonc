@@ -21,7 +21,7 @@
     }
   ],
   "vars": {
-    "VARUNA_ENV": "preview",
+    "VARUNA_ENV": "production",
     "SUPABASE_URL": "https://dnvcmvfexaucyjlvtvbm.supabase.co",
     "SUPABASE_ANON_KEY": "sb_publishable_MnnkG92jRMxKTGXdBTBOuw_gKB30Cz-"
   },
@@ -30,6 +30,17 @@
       {
         "binding": "RESEARCH_TASKS",
         "queue": "varuna-research-tasks"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "varuna-research-tasks",
+        "max_batch_size": 5,
+        "max_batch_timeout": 10,
+        "max_retries": 5,
+        "retry_delay": 30,
+        "max_concurrency": 2,
+        "dead_letter_queue": "varuna-research-tasks-dlq"
       }
     ]
   }

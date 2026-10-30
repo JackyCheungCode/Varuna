@@ -688,7 +688,7 @@ const worker = {
     const claimResponse=await db(internalRequest,env,token,"research_tasks?id=eq."+taskId+"&workspace_id=eq."+workspaceId+claimFilter,"PATCH",{status:"running",attempt_count:attempt,updated_at:now.toISOString(),error_code:null},"return=representation");
     if(!claimResponse.ok)throw new Error("task_claim_failed");
     const claimedRows=await claimResponse.json();
-    if(!claimedRows.length){message.ack();continue;}
+    if(!claimedRows.length){message.retry({delaySeconds:60});continue;}
     const input=task.input||{};
     const query=String(input.research_question||input.title||input.query||"product market research").trim().slice(0,300);
     const geographyText=Array.isArray(input.geographies)?input.geographies.join(" "):"";

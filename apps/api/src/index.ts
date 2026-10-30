@@ -616,10 +616,10 @@ const worker = {
     const suggested=Array.isArray(w.suggested_provider_ids)?w.suggested_provider_ids:[];
     const geographies=Array.isArray(w.geographies)&&w.geographies.length?w.geographies.slice(0,4).map(String):defaultGeographies;
     return geographies.map(geography=>{
-     const china=/china|\\u4e2d\\u56fd|\\bcn\\b/i.test(geography);
+     const china=/china|\u4e2d\u56fd|\bcn\b/i.test(geography);
      const candidates=[...suggested,...(domainFallback[w.domain_code]||[])].filter((id,index,all)=>supportedCollectors.has(id)&&all.indexOf(id)===index&&!(china&&["ebay-browse","youtube-data","reddit"].includes(id)));
      const providerId=candidates.find(id=>configuredProviders.has(id))||null;
-     const scopeNote=!Array.isArray(w.geographies)||!w.geographies.length?"United States is used only as a representative international search sample; it does not establish worldwide market coverage.":null;
+     const scopeNote=geography==="United States"&&(!Array.isArray(w.geographies)||!w.geographies.length)?"United States is used only as a representative international search sample; it does not establish worldwide market coverage.":null;
      const input={...w,geographies:[geography],market_target:geography,market_scope_note:scopeNote};
      return {workspace_id:workspaceId,run_id:run.id,domain_code:w.domain_code,provider_id:providerId,task_type:"evidence_discovery",status:providerId?"queued":"blocked",input,output:providerId?{}:{reason:china?"No China-eligible collector is configured for this workstream. Use an approved China marketplace/social/supplier source or import authorized evidence.":"No configured and supported data collector is available for this workstream. Configure an eligible provider or import authorized evidence."}};
     });
@@ -699,7 +699,7 @@ const worker = {
     const input=task.input||{};
     const query=String(input.research_question||input.title||input.query||"product market research").trim().slice(0,300);
     const geographyText=Array.isArray(input.geographies)?input.geographies.join(" "):"";
-    const china=/china|\u4e2d\u56fd|\bcn\b/i.test(geographyText);
+     const china=/china|\u4e2d\u56fd|\bcn\b/i.test(geography);
     const gl=china?"cn":"us",hl=china?"zh-cn":"en";
     const routes={
      "serpapi":{path:"/api/v1/collect/serpapi",body:{query,engine:task.domain_code==="D01"?"google_shopping":task.domain_code==="D05"?"google_trends":"google",gl,hl,limit:30}},

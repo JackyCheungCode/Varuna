@@ -7,6 +7,7 @@
     "nodejs_compat"
   ],
   "workers_dev": true,
+  "ai": { "binding": "AI" },
   "preview_urls": false,
   "observability": {
     "enabled": true,

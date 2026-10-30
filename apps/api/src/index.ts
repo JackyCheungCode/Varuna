@@ -123,6 +123,40 @@ export default {
   }
 
 
+
+  if(url.pathname==="/api/v1/collect/ebay"&&request.method==="POST"){
+   const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
+   let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}
+   const {workspace_id,project_id,query,marketplace_id="EBAY_US",limit=30}=body||{};
+   if(typeof workspace_id!=="string"||typeof project_id!=="string"||typeof query!=="string"||!query.trim()||query.length>300)return json(request,{error:"invalid_collection_request"},400);
+   const allowedMarkets=["EBAY_US","EBAY_GB","EBAY_DE","EBAY_FR","EBAY_AU","EBAY_CA","EBAY_IT","EBAY_ES","EBAY_JP"];
+   if(!allowedMarkets.includes(marketplace_id))return json(request,{error:"unsupported_marketplace"},400);
+   const member=await membership(request,env,auth.token,auth.user.id,workspace_id);if(!member||!["owner","admin","researcher"].includes(member.role))return json(request,{error:"workspace_researcher_required"},403);
+   const projectQuery=new URLSearchParams({select:"id",id:"eq."+project_id,workspace_id:"eq."+workspace_id,limit:"1"});
+   const projectCheck=await db(request,env,auth.token,"research_projects?"+projectQuery.toString());if(!projectCheck.ok||!(await projectCheck.json()).length)return json(request,{error:"project_not_found"},404);
+   const connectionQuery=new URLSearchParams({select:"secret_ref",workspace_id:"eq."+workspace_id,provider_id:"eq.ebay-browse",limit:"1"});
+   const connectionResponse=await db(request,env,auth.token,"provider_connections?"+connectionQuery.toString());if(!connectionResponse.ok)return json(request,{error:"provider_lookup_failed"},502);
+   const connections=await connectionResponse.json();if(!connections.length||!connections[0].secret_ref)return json(request,{error:"ebay_not_configured"},409);
+   const encrypted=await env.PROVIDER_SECRETS.get(connections[0].secret_ref);if(!encrypted)return json(request,{error:"ebay_secret_missing"},404);
+   let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"ebay_secret_decryption_failed"},500);}
+   if(!credentials.client_id||!credentials.client_secret)return json(request,{error:"ebay_oauth_credentials_required"},400);
+   const sandbox=credentials.environment==="sandbox";const apiHost=sandbox?"https://api.sandbox.ebay.com":"https://api.ebay.com";
+   let tokenData;
+   try{const tokenResponse=await fetch(apiHost+"/identity/v1/oauth2/token",{method:"POST",headers:{authorization:"Basic "+btoa(credentials.client_id+":"+credentials.client_secret),"content-type":"application/x-www-form-urlencoded"},body:"grant_type=client_credentials&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope",signal:AbortSignal.timeout(15000)});if(!tokenResponse.ok)return json(request,{error:safeProviderError(tokenResponse.status),message:"eBay OAuth failed. Verify production/sandbox credentials and app eligibility."},502);tokenData=await tokenResponse.json();}
+   catch{return json(request,{error:"ebay_oauth_network_error"},502);}
+   const params=new URLSearchParams({q:query.trim(),limit:String(Math.min(Math.max(Number(limit)||30,1),50)),sort:"BEST_MATCH"});
+   let searchData;
+   try{const response=await fetch(apiHost+"/buy/browse/v1/item_summary/search?"+params.toString(),{headers:{authorization:"Bearer "+tokenData.access_token,"X-EBAY-C-MARKETPLACE-ID":marketplace_id},signal:AbortSignal.timeout(20000)});if(!response.ok)return json(request,{error:safeProviderError(response.status),message:"eBay Browse API rejected the search request. Production access or marketplace scope may be required."},502);searchData=await response.json();}
+   catch{return json(request,{error:"ebay_search_network_error"},502);}
+   const items=searchData.itemSummaries||[];if(!items.length)return json(request,{collected:0,observations_created:0,marketplace_id,limitations:["No matching listings were returned."]});
+   const sources=items.map((item,index)=>({workspace_id,project_id,provider_id:"ebay-browse",source_name:"eBay Browse API",external_id:item.itemId,source_url:item.itemWebUrl||null,published_at:null,geography:marketplace_id,language:"en",rights_status:"authorized",retention_policy:"Comply with eBay Buy API License Agreement, Developer Terms, attribution, display, storage and refresh requirements.",provenance:{endpoint:"/buy/browse/v1/item_summary/search",query,marketplace_id,search_rank:index+1,api_version:"Browse API"},quality:{sampling_method:"Best-match ranked marketplace item search",sample_size:items.length,metric_semantics:"Observed asking/listing prices; not completed transaction prices, units sold, or market share."}}));
+   const sourceInsert=await db(request,env,auth.token,"evidence_sources","POST",sources,"return=representation");if(!sourceInsert.ok)return json(request,{error:"evidence_source_save_failed"},502);
+   const savedSources=await sourceInsert.json();const observations=[];
+   for(let i=0;i<items.length;i++){const item=items[i];const source=savedSources[i];const values=[["title",item.title,"text"],["price",item.price?.value,"currency"],["currency",item.price?.currency,"ISO-4217"],["seller_username",item.seller?.username,"text"],["seller_feedback_score",item.seller?.feedbackScore,"score"],["condition",item.condition,"text"],["item_location_country",item.itemLocation?.country,"ISO-3166"],["category_id",item.categories?.[0]?.categoryId,"id"],["buying_options",item.buyingOptions,"list"],["shipping_price",item.shippingOptions?.[0]?.shippingCost?.value,"currency"],["shipping_currency",item.shippingOptions?.[0]?.shippingCost?.currency,"ISO-4217"],["item_url",item.itemWebUrl,"url"]];
+    for(const [attribute,value,unit] of values){if(value===undefined||value===null)continue;observations.push({workspace_id,source_id:source.id,entity_type:"marketplace_listing",entity_key:item.itemId,attribute_key:attribute,raw_value:value,normalized_value:value,unit,metric_type:"observed",currency:attribute==="price"||attribute==="shipping_price"?item.price?.currency||null:null,geography:marketplace_id,confidence_rationale:"Direct listing field returned by eBay Browse API; price is an asking price and does not prove a sale."});}}
+   let observationCount=0;let partial=false;if(observations.length){const saved=await db(request,env,auth.token,"evidence_observations","POST",observations,"return=representation");if(saved.ok){const rows=await saved.json();observationCount=rows.length;}else partial=true;}
+   return json(request,{partial,collected:savedSources.length,observations_created:observationCount,provider:"ebay-browse",query,marketplace_id,limitations:["Best-match results are a ranked sample, not the full marketplace catalogue.","Listing prices are asking prices, not completed sales or realized transaction prices.","eBay API access and data display/retention remain subject to app approval and current developer terms."]});
+  }
   if(url.pathname==="/api/v1/collect/youtube"&&request.method==="POST"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
    let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}

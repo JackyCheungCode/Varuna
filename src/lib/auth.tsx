@@ -3,6 +3,7 @@ import { createClient, type Session, type SupabaseClient } from "@supabase/supab
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const authRedirectUrl = (import.meta.env.VITE_AUTH_REDIRECT_URL as string | undefined)?.trim() || "https://docs-product-foundation.varuna-cu7.pages.dev";
 export const supabaseClient: SupabaseClient | null = url && key ? createClient(url, key, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 }) : null;
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     signUp:async(email,password) => {
       if (!supabaseClient) return false;
-      const {error:authError} = await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}});
+      const {error:authError} = await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:authRedirectUrl}});
       setError(authError?.message ?? null);
       return !authError;
     },

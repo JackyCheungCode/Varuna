@@ -13,6 +13,7 @@ Baseline date: 2026-10-30. Delivery uses vertical slices and explicit acceptance
 Exit gate: docs reviewed; repository conventions, environment boundaries, and CI checks agreed.
 
 ## Milestone 1 — Secure application shell
+- Complete the intelligence source/API/AI selection matrix and provider eligibility/contract review before connector implementation.
 - Add Settings > Integrations with provider catalog, dynamic forms, masked credential state, server-side test connection, enable/disable, and audit history.
 - Add encrypted credential persistence, key versioning/rotation contract, Owner/Admin authorization, redaction, and cross-tenant tests.
 - Add model routing by capability, fallback order, budget/timeout controls, and connector market/locale scope.

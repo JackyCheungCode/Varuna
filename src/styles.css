@@ -224,3 +224,6 @@
 .report-citations{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
 .report-citations a,.report-citations span{font-size:11px;color:var(--accent,#3974c6);padding:4px 7px;border:1px solid var(--line,#e6ebf0);border-radius:6px;text-decoration:none;overflow-wrap:anywhere}
 .report-citations a:hover{text-decoration:underline}
+
+
+.report-sample-warning{margin:12px 0;padding:11px 13px;border:1px solid #d8a54a;border-radius:8px;background:#fff8e8;color:#805b18;font-size:12px;line-height:1.6}

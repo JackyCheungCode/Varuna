@@ -120,9 +120,13 @@ Do not set `approved_access` to true before approval. Reddit evidence remains ri
 
 Open Research Projects and select **Generate Research Plan**. Varuna uses the configured AI provider to produce research questions, workstreams, source suggestions, coverage requirements and stopping conditions. It stores a research run and workstream tasks in Supabase.
 
-This step creates a plan; it does not mean every task has been executed. Queue consumers and more provider adapters are still being built.
+This step creates a research run and publishes eligible workstreams to Cloudflare Queues. A workstream is enqueued only when its suggested/fallback collector is implemented and its provider connection has passed a connection test. Unsupported or unconfigured workstreams are saved as `blocked` with a reason. Queue tasks use retries and atomic claims; repeatedly failing tasks are routed to the dead-letter queue. Check task output and source observations before treating a collection as complete.
 
-## 7. Evidence interpretation
+## 7. Product extraction and reporting
+
+Open the project evidence library and run **Extract Products & Attributes** using a configured AI model. The extractor only saves attributes that cite supplied evidence observation IDs; new values remain `unverified`. Review product identity and specifications, then use **Research Reports** to generate an evidence-cited report. Reports exclude unsupported findings without valid observation citations and disclose sample caps and limitations.
+
+## 8. Evidence interpretation
 
 - YouTube views, likes and comments are platform engagement, not sales.
 - eBay prices are asking/listing prices, not completed transaction prices.

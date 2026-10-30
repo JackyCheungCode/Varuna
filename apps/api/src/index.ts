@@ -382,7 +382,7 @@ export default {
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
    let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}
    const {workspace_id,project_id,provider_id,model,source_ids}=body||{};
-   if(typeof workspace_id!=="string"||typeof project_id!=="string"||typeof provider_id!=="string"||!Array.isArray(source_ids)||source_ids.length<1||source_ids.length>50||source_ids.some(x=>typeof x!=="string"))return json(request,{error:"invalid_extraction_request"},400);
+   if(typeof workspace_id!=="string"||typeof project_id!=="string"||typeof provider_id!=="string"||!Array.isArray(source_ids)||source_ids.length<1||source_ids.length>50||source_ids.some(x=>typeof x!=="string"||! /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x)))return json(request,{error:"invalid_extraction_request"},400);
    const member=await membership(request,env,auth.token,auth.user.id,workspace_id);if(!member||!["owner","admin","researcher"].includes(member.role))return json(request,{error:"workspace_researcher_required"},403);
    const projectQ=new URLSearchParams({select:"id,name,subject,markets,languages",id:"eq."+project_id,workspace_id:"eq."+workspace_id,limit:"1"});
    const projectR=await db(request,env,auth.token,"research_projects?"+projectQ.toString());if(!projectR.ok)return json(request,{error:"project_lookup_failed"},502);
@@ -407,7 +407,7 @@ export default {
    let generated;try{generated=await generateAI(provider_id,credentials,connections[0].config||{},{model,task_type:"product_attribute_extraction",system_prompt:system,prompt,max_output_tokens:8192},env);}catch(error){return json(request,{error:"product_extraction_ai_failed",detail:error instanceof Error?error.message:"unknown"},502);}
    let parsed;try{parsed=parseModelJSON(generated.text);}catch{return json(request,{error:"product_extraction_invalid_json"},502);}
    const products=Array.isArray(parsed?.products)?parsed.products.slice(0,100):[];
-   const allowedObservationIds=new Set(observations.map(o=>o.id));
+   const allowedObservationIds=new Set(observations.map(o=>o.id));\n   const allowedAttributeKeys=new Set(["connector","usb_protocol","data_rate","charging_power","e_marker","length","material","certification","color","compatibility","price","currency","rating","review_count","brand","model_number","gtin","mpn","category"]);
    const savedProducts=[];let attributeCount=0;
    for(const product of products){
     if(!product||typeof product.canonical_name!=="string"||product.canonical_name.trim().length<2)continue;
@@ -424,10 +424,10 @@ export default {
     const attrs=Array.isArray(product.attributes)?product.attributes.slice(0,40):[];
     const records=[];
     for(const attr of attrs){
-     if(!attr||typeof attr.key!=="string"||attr.value===undefined||attr.value===null)continue;
+     if(!attr||typeof attr.key!=="string"||!allowedAttributeKeys.has(attr.key)||attr.value===undefined||attr.value===null)continue;
      const evidenceIds=Array.isArray(attr.evidence_observation_ids)?attr.evidence_observation_ids.filter(id=>allowedObservationIds.has(id)):[];if(!evidenceIds.length)continue;
      for(const evidenceId of evidenceIds.slice(0,5)){
-      records.push({workspace_id,project_id,product_id:saved.id,attribute_key:attr.key.slice(0,100),value_text:typeof attr.value==="string"?attr.value.slice(0,1000):null,value_numeric:typeof attr.value==="number"?attr.value:null,unit:typeof attr.unit==="string"?attr.unit.slice(0,40):null,normalized_value:typeof attr.value==="object"?attr.value:null,evidence_observation_id:evidenceId,evidence_source_id:observations.find(o=>o.id===evidenceId)?.source_id||null,extraction_method:"ai_evidence_extraction",confidence:Math.min(1,Math.max(0,Number(attr.confidence)||0.5)),verification_status:"unverified"});
+      records.push({workspace_id,project_id,product_id:saved.id,attribute_key:attr.key.slice(0,100),value_text:typeof attr.value==="string"?attr.value.slice(0,1000):null,value_numeric:typeof attr.value==="number"&&Number.isFinite(attr.value)?attr.value:null,unit:typeof attr.unit==="string"?attr.unit.slice(0,40):null,normalized_value:typeof attr.value==="object"?attr.value:null,evidence_observation_id:evidenceId,evidence_source_id:observations.find(o=>o.id===evidenceId)?.source_id||null,extraction_method:"ai_evidence_extraction",confidence:Math.min(1,Math.max(0,Number(attr.confidence)||0.5)),verification_status:"unverified"});
      }
     }
     if(records.length){const ar=await db(request,env,auth.token,"product_attribute_values","POST",records,"return=representation");if(ar.ok)attributeCount+=(await ar.json()).length;}

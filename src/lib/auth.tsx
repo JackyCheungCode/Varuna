@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     signUp:async(email,password) => {
       if (!supabaseClient) return false;
-      const {error:authError} = await supabaseClient.auth.signUp({email,password});
+      const {error:authError} = await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}});
       setError(authError?.message ?? null);
       return !authError;
     },

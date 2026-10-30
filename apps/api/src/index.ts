@@ -33,6 +33,13 @@ async function testProvider(providerId,credentials){
  return{status:"degraded",error:safeProviderError(response.status),message:"Provider returned HTTP "+response.status+"; verify credentials, permissions, and quota."};
 }
 
+function safeProviderBase(value){
+ const parsed=new URL(value);
+ const host=parsed.hostname.toLowerCase();
+ const privateIPv4=/^(10\\.|127\\.|169\\.254\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/;
+ if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.search||parsed.hash||host==="localhost"||host.endsWith(".local")||privateIPv4.test(host)||host==="0.0.0.0")throw new Error("invalid_provider_base_url");
+ return parsed.toString().replace(/\\/+$/,"");
+}
 async function generateAI(providerId,credentials,config,input){
  const key=credentials.api_key||credentials.apiKey||credentials.key||"";
  const model=input.model||config.model;
@@ -70,7 +77,7 @@ export default {
  async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
-  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.2.0",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY)}});
+  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.3.0",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY)}});
   if(url.pathname==="/api/v1/catalog")return json(request,{domains:domains.map(([id,name,label])=>({id,name,label})),providers:providers.map(([id,name,domain,category,capabilities])=>({id,name,domain,category,capabilities:capabilities.split(","),status:"not_configured"}))});
   if(url.pathname==="/api/v1/providers"&&request.method==="GET"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);

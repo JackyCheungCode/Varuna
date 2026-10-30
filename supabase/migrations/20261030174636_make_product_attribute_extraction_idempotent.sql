@@ -1,0 +1,1 @@
+create unique index if not exists product_attribute_values_product_attr_observation_method_uq on public.product_attribute_values(product_id,attribute_key,evidence_observation_id,extraction_method);

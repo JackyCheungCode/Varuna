@@ -7,10 +7,10 @@ Baseline date: 2026-10-30. Delivery uses vertical slices and explicit acceptance
 - [x] Confirm category-agnostic product scope.
 - [x] Confirm AI-assisted automation with human approval.
 - [x] Establish PRD, architecture, and data-governance baseline.
-- [ ] Add application scaffold, CI, and local development instructions.
-- [ ] Review environments and establish isolated Varuna resources.
+- [x] Add application scaffold, CI, and local development instructions.
+- [x] Connect isolated Varuna Pages, Worker, Supabase, KV and Queue resources.
 
-Exit gate: docs reviewed; repository conventions, environment boundaries, and CI checks agreed.
+Exit gate: docs reviewed; repository conventions, environment boundaries, CI checks and connected Varuna resources established.
 
 ## Milestone 1 — Secure application shell
 - Complete the intelligence source/API/AI selection matrix and provider eligibility/contract review before connector implementation.
@@ -29,9 +29,10 @@ Exit gate: authenticated user creates/views an isolated research project in prev
 - Connector interface and registry.
 - Start with one search or licensed product-data provider selected by available credentials and terms.
 - Collection jobs, raw payload metadata, product/listing/variant model, provenance.
-- Idempotent Queue consumer and retry/dead-letter handling.
+- [x] Queue consumer with atomic task claiming, retry policy and dead-letter queue.
+- [x] Route only to supported collectors with tested credentials; mark unsupported/unconfigured workstreams blocked.
 
-Exit gate: reproducible sample collection creates normalized product records and source-linked observations.
+Exit gate: reproducible sample collection creates normalized product records and source-linked observations. A bounded asynchronous collection path is implemented; broader provider coverage remains future work.
 
 ## Milestone 3 — Review intelligence
 - Authorized review source or user-uploaded dataset.
@@ -56,6 +57,10 @@ Exit gate: USB Cable research journey works with real authorized data or clearly
 - Performance and security review.
 
 Exit gate: production readiness review completed; no unresolved critical security or governance findings.
+
+## Release-candidate scope
+
+The current MVP delivers authenticated project management, provider configuration, selected live collectors, CSV evidence import, evidence-linked product extraction, sample coverage analytics, evidence-cited AI reports and queued execution for supported connected collectors. It does not claim full coverage of all 12 intelligence domains, automated supplier discovery, complete China marketplace APIs, representative market sizing, or fully automated opportunity scoring. Production release still requires passing CI, deployment verification, and a real authenticated smoke test using the owner's eligible provider credentials.
 
 ## Delivery rules
 - Never deploy unreviewed schema changes to production.

@@ -228,6 +228,7 @@ export default {
    let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"serpapi_secret_decryption_failed"},500);}
    const apiKey=credentials.api_key||credentials.apiKey||credentials.key;if(!apiKey)return json(request,{error:"serpapi_api_key_required"},400);
    const params=new URLSearchParams({engine,q:query.trim(),api_key:apiKey,gl:String(gl).toLowerCase(),hl:String(hl).toLowerCase(),output:"json"});
+   if(engine==="google_trends"){params.delete("gl");params.set("geo",String(gl).toUpperCase());}
    if(typeof location==="string"&&location.trim()&&["google","google_shopping","google_maps"].includes(engine))params.set("location",location.trim().slice(0,120));
    if(engine==="google")params.set("num",String(Math.min(Math.max(Number(limit)||20,1),100)));
    let data;

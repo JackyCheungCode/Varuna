@@ -32,6 +32,8 @@ The GitHub development branch is used for Pages preview builds. The production b
   - `GET /api/v1/providers?workspace_id=...`
   - `POST /api/v1/providers` to encrypt and save provider credentials.
   - `POST /api/v1/providers/{provider_id}/test` to validate supported credentials.
+  - `POST /api/v1/ai/generate` to run a configured model for a workspace task.
+  - `POST /api/v1/projects/{project_id}/plan` to generate an evidence-led research plan and persist a run plus queued workstream tasks.
 - Credentials are never returned to the browser. The database stores only a KV reference and non-secret connection metadata. KV values contain authenticated AES-GCM ciphertext.
 
 ## Current provider validation coverage

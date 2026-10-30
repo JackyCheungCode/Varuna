@@ -1,6 +1,11 @@
 # Varuna
 
-AI-powered Global Product Intelligence Platform.
+AI-powered Global Product Intelligence & Product Development Decision Platform.
+
+## Mission
+Given a product, product concept, or customer problem, Varuna gathers the broadest relevant lawfully accessible evidence from China and international markets, evaluates its quality and limitations, analyzes demand/customers/competition/technical feasibility/sourcing/economics, and produces evidence-backed product development decisions.
+
+Varuna is not simply an API aggregator or AI report writer. It is a decision system. It must disclose inaccessible sources, missing data, uncertainty, contradictory evidence, and assumptions. It must never imply that all internet data can be accessed or that proxy metrics are measured sales.
 
 ## Approved product baseline
 - Markets: China and worldwide.
@@ -23,15 +28,18 @@ AI-powered Global Product Intelligence Platform.
 - docs/CONFIGURATION-CENTER.md
 - docs/INTELLIGENCE-SOURCES.md
 - docs/API-INTELLIGENCE-TAXONOMY.md
+- docs/RESEARCH-METHODOLOGY.md
 
 ## Product principles
-1. Every material finding is traceable to source evidence, collection time, and analysis version.
-2. Estimates are labeled; search interest, ranking, and review volume are not sales volume.
-3. Use official APIs, licensed data, and permitted collection methods; comply with provider terms and applicable law.
-4. Never expose provider credentials, Supabase service-role credentials, or encryption keys in browser code.
-5. Human review is required before important product recommendations become approved decisions.
-6. Routine provider configuration is managed in the frontend; credentials are encrypted and used server-side only.
-7. Organize integrations by intelligence domain, while keeping providers, connectors, evidence types, and access rights distinct.
+1. Research is decision-first, multi-source, multilingual, and adaptive to the product and market.
+2. Every material finding is traceable to source evidence, collection time, method, and analysis version.
+3. Distinguish observed, derived, estimated, inferred, and recommended claims.
+4. Triangulate important claims using independent evidence; preserve contradictions and source limitations.
+5. Search interest, ranking, views, listings, and review volume are not sales volume.
+6. Use official APIs, licensed data, primary research, and permitted methods; comply with provider terms and applicable law.
+7. Never expose provider credentials, Supabase service-role credentials, or encryption keys in browser code.
+8. Human review is required before important product recommendations become approved decisions.
+9. Integrations are organized by intelligence domain, while providers, connectors, evidence types, and access rights remain distinct.
 
 ## Current status
-Product-foundation stage. Requirements and architecture are being established before production data collection or deployment.
+Product-foundation stage. Research methodology, requirements, source strategy, and architecture are being established before production data collection or deployment.

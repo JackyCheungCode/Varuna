@@ -57,6 +57,10 @@ The browser sends credentials over HTTPS to `varuna-api`. The Worker authenticat
 - SerpApi Shopping prices are displayed offer snapshots, Maps review metrics are platform signals, and Trends values are normalized interest indices; none is a direct sales measure.
 - All provider data remains subject to the source provider's terms, retention, refresh, display, quota and commercial-use rules.
 
+## Research task execution
+
+Cloudflare Queues now consumes `varuna-research-tasks` with atomic task claiming, bounded retries, a configured `varuna-research-tasks-dlq`, and an encrypted short-lived user-scoped authorization reference stored in the existing EU KV vault. Workstreams are dispatched only to connected supported adapters (SerpApi, DataForSEO, Google Ads Keyword Planner, eBay Browse, YouTube Data API and approval-gated Reddit). Tasks without a tested supported adapter are persisted as `blocked` with an explanation. A dedicated DLQ inspection/redrive workflow and full run-level recovery dashboard remain outstanding.
+
 ## Next connector priorities
 
 1. Complete DataForSEO keyword metrics and search-volume adapter with metric-definition metadata.
@@ -64,5 +68,5 @@ The browser sends credentials over HTTPS to `varuna-api`. The Worker authenticat
 3. Implement Amazon/eBay/Walmart marketplace adapters subject to production eligibility.
 4. Implement China marketplace adapters only through approved Open Platform/ISV permissions.
 5. Add supplier RFQ/quote import, standards/certification evidence and trade datasets.
-6. Wire Cloudflare Queues consumers with idempotency, retries, dead-letter handling and durable run state.
+6. Expand queue execution with dead-letter inspection/redrive, durable run aggregation and recovery dashboards.
 7. Enable R2 only after account activation and retention/access policies are approved.

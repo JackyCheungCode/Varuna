@@ -234,7 +234,7 @@ function Dashboard({session,supabase,signOut}:{session:Session;supabase:Supabase
       const project=projectRows.find(p=>p.id===evidenceProject.id);
       const response=await fetch(API_BASE+"/api/v1/import/observations",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+session.access_token},body:JSON.stringify({workspace_id:workspaceId,project_id:evidenceProject.id,provider_id:importType,source_name:file.name,file_name:file.name,file_hash:fileHash,geography:project?.markets?.join(",")||"unknown",language:project?.markets?.includes("CN")?"zh-CN":"en",rows})});
       const result=await response.json();if(!response.ok)throw new Error(result.error||"csv_import_failed");
-      notify("CSV 导入完成："+result.rows_imported+" 行、"+result.observations_inserted+" 条观测。");
+      if(result.already_imported)notify("该 CSV 文件此前已导入，本次未重复添加。");else notify("CSV 导入完成："+result.rows_imported+" 行、"+result.observations_inserted+" 条观测。");
       await loadProjectEvidence(evidenceProject);
     }catch(error){notify("CSV 导入失败："+(error instanceof Error?error.message:"文件格式错误"));}
     finally{setImportBusy(false);}

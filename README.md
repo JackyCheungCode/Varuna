@@ -45,7 +45,7 @@ Varuna is not simply an API aggregator or AI report writer. It is a decision sys
 9. Integrations are organized by intelligence domain, while providers, connectors, evidence types, and access rights remain distinct.
 
 ## Current status
-Production MVP 0.5.2 is deployed. The application includes authenticated workspaces/projects, encrypted provider configuration, live collectors for YouTube, eBay Browse, DataForSEO, SerpApi and Google Ads Keyword Planner, CSV evidence import, evidence-linked product/attribute extraction, evidence-cited AI reports, sample coverage analytics, and an asynchronous research-task execution path using Cloudflare Queues. Cloudflare Pages and Worker production deployments are active. The owner must still complete the first authenticated end-to-end smoke test and connect eligible provider credentials before relying on live market findings.
+Production MVP 0.5.3 is deployed. The application includes authenticated workspaces/projects, encrypted provider configuration, live collectors for YouTube, eBay Browse, DataForSEO, SerpApi and Google Ads Keyword Planner, CSV evidence import, evidence-linked product/attribute extraction, evidence-cited AI reports, sample coverage analytics, and an asynchronous research-task execution path using Cloudflare Queues. Cloudflare Pages and Worker production deployments are active. The owner must still complete the first authenticated end-to-end smoke test and connect eligible provider credentials before relying on live market findings.
 
 
 ## Application scaffold
@@ -54,7 +54,7 @@ Production MVP 0.5.2 is deployed. The application includes authenticated workspa
 - Cloudflare Pages project: `varuna`, connected to this GitHub repository; production branch remains `main` and feature branches are configured for preview deployments.
 - Cloudflare API Worker: `varuna-api`, with authenticated provider configuration/tests, AI planning, collection, product extraction, report generation and queue-consumer endpoints.
 - Production app: `https://varuna-cu7.pages.dev`.
-- API health: `https://varuna-api.xg-y.workers.dev/api/v1/health` (Worker API v0.5.2).
+- API health: `https://varuna-api.xg-y.workers.dev/api/v1/health` (Worker API v0.5.3).
 - Supabase: core schema migration `varuna_core_foundation` has been applied with tenant-scoped RLS tables for workspaces, research projects, provider catalog/connections, research runs/tasks, evidence, claims, and audit events.
 
 ### Local development

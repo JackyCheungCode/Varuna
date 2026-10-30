@@ -66,6 +66,9 @@ Paste a JSON object into the credential field:
 ```
 Choose `sandbox` only for sandbox credentials. Test OAuth, then use **Collect eBay**. Production Browse API eligibility may be separate from OAuth success.
 
+### SerpApi
+Enter your SerpApi Private API Key as a plain key in Configuration Center, save it, and test the connection. The test uses SerpApi's free Account API and does not consume a search credit. In a research project, use the SerpApi actions for Google web search, Shopping, News, Maps or Trends. Engine availability, quota, commercial reuse and retention depend on your SerpApi plan and applicable source/platform terms.
+
 ### DataForSEO
 Paste:
 ```json
@@ -124,7 +127,7 @@ This step creates a plan; it does not mean every task has been executed. Queue c
 - YouTube views, likes and comments are platform engagement, not sales.
 - eBay prices are asking/listing prices, not completed transaction prices.
 - Google Ads average monthly searches and bid metrics are planning estimates, not sales.
-- SERP rank is a location- and time-specific search snapshot.
+- SERP rank is a location- and time-specific search snapshot.\n- SerpApi Shopping prices are displayed offers, Maps reviews are platform signals, and Trends values are normalized interest indices; none is a direct sales measure.
 - Reddit posts are relevance-ranked and non-representative; data use is subject to explicit approval and terms.
 
 Every report must keep source, sample, date, region, method, rights and limitations visible.

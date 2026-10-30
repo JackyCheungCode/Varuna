@@ -660,8 +660,13 @@ const worker = {
     if(!taskRows.length){message.ack();continue;}
     const task=taskRows[0];
     if(["succeeded","partial","skipped","blocked"].includes(task.status)){await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;}
+    const now=new Date();
+    const claimFilter=task.status==="running"?"&status=eq.running&updated_at=lt."+encodeURIComponent(new Date(now.getTime()-10*60*1000).toISOString()):"&status=in.(queued,failed)";
     const attempt=Number(task.attempt_count||0)+1;
-    await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:"running",attempt_count:attempt,updated_at:new Date().toISOString(),error_code:null},"return=minimal");
+    const claimResponse=await db(internalRequest,env,token,"research_tasks?id=eq."+taskId+"&workspace_id=eq."+workspaceId+claimFilter,"PATCH",{status:"running",attempt_count:attempt,updated_at:now.toISOString(),error_code:null},"return=representation");
+    if(!claimResponse.ok)throw new Error("task_claim_failed");
+    const claimedRows=await claimResponse.json();
+    if(!claimedRows.length){message.ack();continue;}
     const input=task.input||{};
     const query=String(input.research_question||input.title||input.query||"product market research").trim().slice(0,300);
     const geographyText=(Array.isArray(input.geographies)?input.geographies.join(" "):"")+" "+(Array.isArray(payload.markets)?payload.markets.join(" "):"");

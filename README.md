@@ -21,6 +21,7 @@ AI-powered Global Product Intelligence Platform.
 - docs/DATA-GOVERNANCE.md
 - docs/ROADMAP.md
 - docs/CONFIGURATION-CENTER.md
+- docs/INTELLIGENCE-SOURCES.md
 
 ## Product principles
 1. Every material finding is traceable to source evidence, collection time, and analysis version.

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Bell, BookOpen,
   Boxes, BriefcaseBusiness, Check, ChevronDown, CircleHelp, Clock3, Compass, Cpu, Database,
@@ -41,8 +41,11 @@ const providers = [
   { name:"YouTube", category:"社交数据", domain:"D03", model:"YouTube Data API", state:"未配置", detail:"视频元数据与互动指标" },
   { name:"Google Trends", category:"趋势数据", domain:"D05", model:"Trends", state:"接入方式待确认", detail:"搜索兴趣变化，不代表销量" }
 ];
+const API_BASE = "https://varuna-api.xg-y.workers.dev";
 function App() {
   const [section,setSection] = useState<Section>("overview");
+  const [apiStatus,setApiStatus] = useState<"checking"|"online"|"error">("checking");
+  useEffect(()=>{let active=true;fetch(API_BASE+"/api/v1/health").then(r=>{if(!r.ok)throw new Error("API unavailable");return r.json();}).then(()=>{if(active)setApiStatus("online");}).catch(()=>{if(active)setApiStatus("error");});return()=>{active=false;};},[]);
   const [mobileOpen,setMobileOpen] = useState(false);
   const [query,setQuery] = useState("");
   const [showCreate,setShowCreate] = useState(false);
@@ -64,7 +67,7 @@ function App() {
       <div className="brand"><div className="brand-mark"><Layers3 size={21}/></div><div><strong>VARUNA</strong><span>PRODUCT INTELLIGENCE</span></div><button className="icon-btn mobile-close" onClick={()=>setMobileOpen(false)}><X size={18}/></button></div>
       <div className="workspace-switch"><div className="workspace-avatar">V</div><div><b>Varuna Workspace</b><small>Personal workspace</small></div><ChevronDown size={15}/></div>
       {nav.map(group=><div className="nav-group" key={group.group}><div className="nav-label">{group.group}</div>{group.items.map(item=>{const Icon=item.icon;return <button key={item.id} className={`nav-item ${section===item.id?"active":""}`} onClick={()=>{setSection(item.id as Section);setMobileOpen(false);}}><Icon size={17}/><span>{item.label}</span>{item.id==="projects"&&<em>1</em>}</button>})}</div>)}
-      <div className="sidebar-bottom"><div className="system-health"><span className="health-dot"></span><div><b>系统基础状态</b><small>前端预览 · 后端待部署</small></div></div><div className="user-profile"><div className="user-avatar">J</div><div><b>Workspace Admin</b><small>管理员</small></div><ChevronDown size={15}/></div></div>
+      <div className="sidebar-bottom"><div className="system-health"><span className="health-dot"></span><div><b>系统基础状态</b><small>{apiStatus==="online"?"API 已部署 · Web 构建待验证":apiStatus==="error"?"API 连接异常":"API 状态检测中"}</small></div></div><div className="user-profile"><div className="user-avatar">J</div><div><b>Workspace Admin</b><small>管理员</small></div><ChevronDown size={15}/></div></div>
     </aside>
     {mobileOpen&&<button className="mobile-scrim" onClick={()=>setMobileOpen(false)} aria-label="关闭导航"/>}
     <main className="main-area">
@@ -76,7 +79,7 @@ function App() {
           <div className="dashboard-grid"><section className="panel project-panel"><div className="panel-head"><div><h2>研究项目</h2><p>Research workspace</p></div><button className="text-btn" onClick={()=>setSection("projects")}>查看全部 <ArrowRight size={15}/></button></div><div className="empty-state"><div className="empty-icon"><PackageSearch size={24}/></div><b>开始你的第一个产品研究</b><span>输入产品品类或市场问题，Varuna 将生成研究计划、证据需求和数据源清单。</span><button className="secondary-btn" onClick={()=>setShowCreate(true)}><Plus size={16}/> 新建研究项目</button></div></section>
             <section className="panel"><div className="panel-head"><div><h2>数据源覆盖</h2><p>Intelligence domains</p></div><button className="icon-btn"><Filter size={16}/></button></div><div className="domain-list">{domains.slice(0,6).map(([id,label])=><div className="domain-row" key={id}><span className="domain-id">{id}</span><span>{label}</span><div className="domain-track"><i style={{width:"0%"}}/></div><small>待接入</small></div>)}</div><button className="panel-footer-btn" onClick={()=>setSection("settings")}>查看全部 12 个情报领域 <ArrowRight size={15}/></button></section>
           </div>
-          <div className="bottom-grid"><section className="panel"><div className="panel-head"><div><h2>研究工作流</h2><p>Evidence-led research pipeline</p></div><span className="muted-tag">11 个阶段</span></div><div className="pipeline">{["定义研究范围","自适应研究规划","合规数据采集","证据归档与标准化","证据质量评估","市场与客户分析","产品技术分析","供应链与成本","机会假设","开发规格书","人工审批与监测"].map((s,i)=><div className="pipeline-step" key={s}><span>{String(i+1).padStart(2,"0")}</span>{s}{i===0&&<em>准备就绪</em>}</div>)}</div></section><section className="panel"><div className="panel-head"><div><h2>系统组件</h2><p>Infrastructure readiness</p></div><span className="muted-tag">待部署</span></div><div className="infra-list"><Infra icon={<Globe2/>} name="Cloudflare Pages" desc="Web 应用托管" status="未创建"/><Infra icon={<Cpu/>} name="Cloudflare Workers" desc="API 与数据连接层" status="未创建"/><Infra icon={<Database/>} name="Supabase" desc="Postgres · Auth · pgvector" status="项目已存在"/><Infra icon={<Boxes/>} name="Queues / R2" desc="异步任务与证据存储" status="待配置"/></div></section></div>
+          <div className="bottom-grid"><section className="panel"><div className="panel-head"><div><h2>研究工作流</h2><p>Evidence-led research pipeline</p></div><span className="muted-tag">11 个阶段</span></div><div className="pipeline">{["定义研究范围","自适应研究规划","合规数据采集","证据归档与标准化","证据质量评估","市场与客户分析","产品技术分析","供应链与成本","机会假设","开发规格书","人工审批与监测"].map((s,i)=><div className="pipeline-step" key={s}><span>{String(i+1).padStart(2,"0")}</span>{s}{i===0&&<em>准备就绪</em>}</div>)}</div></section><section className="panel"><div className="panel-head"><div><h2>系统组件</h2><p>Infrastructure readiness</p></div><span className="muted-tag">待部署</span></div><div className="infra-list"><Infra icon={<Globe2/>} name="Cloudflare Pages" desc="Web 应用托管" status="项目已创建"/><Infra icon={<Cpu/>} name="Cloudflare Workers" desc="API 与数据连接层" status="已部署"/><Infra icon={<Database/>} name="Supabase" desc="Postgres · Auth · pgvector" status="项目已存在"/><Infra icon={<Boxes/>} name="Queues / R2" desc="异步任务与证据存储" status="待配置"/></div></section></div>
         </>}
         {section==="settings"&&<><div className="page-heading"><div><div className="eyebrow">PLATFORM CONFIGURATION</div><h1>配置中心</h1><p>统一管理 12 个情报领域、API 连接和 AI 模型路由。</p></div><button className="secondary-btn" onClick={()=>notify("连接测试将在 Worker API 部署后启用。")}><Activity size={16}/> 测试全部连接</button></div>
           <div className="notice"><ShieldCheck size={18}/><div><b>密钥安全策略</b><span>正式版本会将 API Key 加密后存入服务端；页面不会回显完整密钥。当前界面仅为配置入口预览，保存操作不会把密钥发送到任何位置。</span></div></div>

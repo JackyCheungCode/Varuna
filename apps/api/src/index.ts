@@ -36,9 +36,9 @@ async function testProvider(providerId,credentials){
 function safeProviderBase(value){
  const parsed=new URL(value);
  const host=parsed.hostname.toLowerCase();
- const privateIPv4=/^(10\\.|127\\.|169\\.254\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.)/;
+ const privateIPv4=/^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/;
  if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.search||parsed.hash||host==="localhost"||host.endsWith(".local")||privateIPv4.test(host)||host==="0.0.0.0")throw new Error("invalid_provider_base_url");
- return parsed.toString().replace(/\\/+$/,"");
+ return parsed.toString().replace(/\/+$/,"");
 }
 async function generateAI(providerId,credentials,config,input){
  const key=credentials.api_key||credentials.apiKey||credentials.key||"";

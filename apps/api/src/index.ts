@@ -420,16 +420,16 @@ export default {
    const projectRows=await projectR.json();if(!projectRows.length)return json(request,{error:"project_not_found"},404);
    const productQ=new URLSearchParams({select:"id,canonical_name,brand,model_number,category,identity_confidence",workspace_id:"eq."+workspace_id,project_id:"eq."+project_id,limit:"200"});
    const productR=await db(request,env,auth.token,"product_entities?"+productQ.toString());if(!productR.ok)return json(request,{error:"product_lookup_failed"},502);
-   const products=await productR.json();if(!products.length)return json(request,{error:"no_product_samples",message:"Extract products from project evidence before generating a report."},409);
+   const productRows=await productR.json();if(!productRows.length)return json(request,{error:"no_product_samples",message:"Extract products from project evidence before generating a report."},409);
+   const productSampleTruncated=productRows.length>200;const products=productRows.slice(0,200);
    const productIds=products.map(p=>p.id);
-   const inIds=productIds.map(id=>encodeURIComponent(id)).join(",");
    const [attrR,linkR]=await Promise.all([
-    db(request,env,auth.token,"product_attribute_values?"+new URLSearchParams({select:"id,product_id,attribute_key,value_text,value_numeric,unit,confidence,verification_status,evidence_observation_id",product_id:"in.("+productIds.join(",")+")",limit:"1000"}).toString()),
-    db(request,env,auth.token,"product_evidence_links?"+new URLSearchParams({select:"product_id,evidence_source_id,evidence_observation_id,relationship,confidence",product_id:"in.("+productIds.join(",")+")",limit:"1000"}).toString())
+    db(request,env,auth.token,"product_attribute_values?"+new URLSearchParams({select:"id,product_id,attribute_key,value_text,value_numeric,unit,confidence,verification_status,evidence_observation_id",product_id:"in.("+productIds.join(",")+")",limit:"1001"}).toString()),
+    db(request,env,auth.token,"product_evidence_links?"+new URLSearchParams({select:"product_id,evidence_source_id,evidence_observation_id,relationship,confidence",product_id:"in.("+productIds.join(",")+")",limit:"1001"}).toString())
    ]);
    if(!attrR.ok||!linkR.ok)return json(request,{error:"product_evidence_lookup_failed"},502);
-   const attributes=await attrR.json(),links=await linkR.json();
-   const observationIds=[...new Set([...links.map(x=>x.evidence_observation_id),...attributes.map(x=>x.evidence_observation_id)].filter(Boolean))].slice(0,400);
+   const attributeRows=await attrR.json(),linkRows=await linkR.json();const attributeSampleTruncated=attributeRows.length>1000,linkSampleTruncated=linkRows.length>1000;const attributes=attributeRows.slice(0,1000),links=linkRows.slice(0,1000);
+   const allObservationIds=[...new Set([...links.map(x=>x.evidence_observation_id),...attributes.map(x=>x.evidence_observation_id)].filter(Boolean))];const observationSampleTruncated=allObservationIds.length>400;const observationIds=allObservationIds.slice(0,400);
    if(!observationIds.length)return json(request,{error:"product_evidence_missing",message:"Products have no traceable source observations. Re-run evidence-backed extraction."},409);
    const allSourceIds=[...new Set(links.map(x=>x.evidence_source_id).filter(Boolean))];const sourceSampleTruncated=allSourceIds.length>200;const sourceIds=allSourceIds.slice(0,200);
    const [obsR,sourceR]=await Promise.all([

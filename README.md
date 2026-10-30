@@ -45,7 +45,7 @@ Varuna is not simply an API aggregator or AI report writer. It is a decision sys
 9. Integrations are organized by intelligence domain, while providers, connectors, evidence types, and access rights remain distinct.
 
 ## Current status
-MVP release-candidate implementation. The application includes authenticated workspaces/projects, encrypted provider configuration, live collectors for YouTube, eBay Browse, DataForSEO, SerpApi and Google Ads Keyword Planner, CSV evidence import, evidence-linked product/attribute extraction, evidence-cited AI reports, sample coverage analytics, and an asynchronous research-task execution path using Cloudflare Queues. Production release remains gated by successful CI, final Cloudflare Worker/Pages deployment verification, and an authenticated end-to-end smoke test with eligible provider credentials.
+Production MVP 0.5.2 is deployed. The application includes authenticated workspaces/projects, encrypted provider configuration, live collectors for YouTube, eBay Browse, DataForSEO, SerpApi and Google Ads Keyword Planner, CSV evidence import, evidence-linked product/attribute extraction, evidence-cited AI reports, sample coverage analytics, and an asynchronous research-task execution path using Cloudflare Queues. Cloudflare Pages and Worker production deployments are active. The owner must still complete the first authenticated end-to-end smoke test and connect eligible provider credentials before relying on live market findings.
 
 
 ## Application scaffold
@@ -53,7 +53,8 @@ MVP release-candidate implementation. The application includes authenticated wor
 - Frontend: React 19 + TypeScript + Vite (`src/`), built to `dist/`.
 - Cloudflare Pages project: `varuna`, connected to this GitHub repository; production branch remains `main` and feature branches are configured for preview deployments.
 - Cloudflare API Worker: `varuna-api`, with authenticated provider configuration/tests, AI planning, collection, product extraction, report generation and queue-consumer endpoints.
-- API health: `https://varuna-api.xg-y.workers.dev/api/v1/health`.
+- Production app: `https://varuna-cu7.pages.dev`.
+- API health: `https://varuna-api.xg-y.workers.dev/api/v1/health` (Worker API v0.5.2).
 - Supabase: core schema migration `varuna_core_foundation` has been applied with tenant-scoped RLS tables for workspaces, research projects, provider catalog/connections, research runs/tasks, evidence, claims, and audit events.
 
 ### Local development
@@ -67,4 +68,4 @@ npm run build
 
 ### Current implementation boundary
 
-The current MVP supports project creation, authenticated configuration, selected live evidence collectors, CSV evidence import, AI product extraction with source-observation references, sample coverage analysis and evidence-cited AI reports. Research-plan workstreams are mapped only to supported collectors whose credentials have passed connection tests; unsupported or unconfigured workstreams are explicitly marked blocked instead of being presented as completed. Cloudflare Queues dispatches tasks with an encrypted, short-lived user-scoped Supabase access token stored in the EU KV vault; the queue payload contains only a token reference, not the bearer token. Retries, atomic task claiming and a dead-letter queue are configured. Provider credentials are encrypted with AES-GCM and never returned to the browser. This is a bounded research MVP, not universal marketplace coverage: provider eligibility, source rights, sampling bias, quota, and data retention remain visible constraints. Production release requires final environment verification and an authenticated end-to-end smoke test.
+The current MVP supports project creation, authenticated configuration, selected live evidence collectors, CSV evidence import, AI product extraction with source-observation references, sample coverage analysis and evidence-cited AI reports. Research-plan workstreams are mapped only to supported collectors whose credentials have passed connection tests; unsupported or unconfigured workstreams are explicitly marked blocked instead of being presented as completed. Cloudflare Queues dispatches tasks with an encrypted, short-lived user-scoped Supabase access token stored in the EU KV vault; the queue payload contains only a token reference, not the bearer token. Retries, atomic task claiming and a dead-letter queue are configured. Provider credentials are encrypted with AES-GCM and never returned to the browser. This is a bounded research MVP, not universal marketplace coverage: provider eligibility, source rights, sampling bias, quota, and data retention remain visible constraints. Production deployment is active. First-use verification still requires an owner login, production Auth redirect allowlist confirmation, and a successful provider connection/collection smoke test.

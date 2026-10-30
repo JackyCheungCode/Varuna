@@ -169,3 +169,19 @@
 .product-attribute-row b{overflow-wrap:anywhere}
 .product-attribute-row em{font-style:normal;color:#9a6700;background:#fff7e6;border-radius:5px;padding:3px 5px;font-size:10px;white-space:nowrap}
 @media(max-width:640px){.product-catalog-controls{width:100%}.product-catalog-controls select,.product-catalog-controls button{width:100%;max-width:none}.product-attribute-row{grid-template-columns:1fr 1.2fr}.product-attribute-row em{grid-column:2;justify-self:start}}
+
+
+.market-metrics{margin-bottom:16px}
+.market-coverage-panel,.market-brand-panel{padding:20px;margin-bottom:16px}
+.market-coverage-panel .panel-heading,.market-brand-panel .panel-heading{margin-bottom:18px}
+.market-coverage-panel .panel-heading p,.market-brand-panel .panel-heading p{margin:5px 0 0;color:var(--muted,#667085);font-size:13px}
+.coverage-list{display:grid;gap:15px}
+.coverage-row{display:grid;grid-template-columns:140px minmax(80px,1fr) 46px;gap:12px;align-items:center}
+.coverage-row>div:first-child{display:grid;gap:3px}
+.coverage-row>div:first-child small{color:var(--muted,#667085);font-size:11px}
+.coverage-track{height:9px;border-radius:20px;background:var(--line,#e6ebf0);overflow:hidden}
+.coverage-track span{display:block;height:100%;border-radius:20px;background:var(--accent,#3974c6)}
+.coverage-row>strong{text-align:right;font-size:13px}
+.brand-count-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line,#e6ebf0);font-size:13px}
+.brand-count-row:last-child{border-bottom:0}
+@media(max-width:640px){.coverage-row{grid-template-columns:100px minmax(50px,1fr) 38px;gap:8px}.market-coverage-panel,.market-brand-panel{padding:14px}}

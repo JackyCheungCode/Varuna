@@ -418,7 +418,7 @@ export default {
    const projectQ=new URLSearchParams({select:"id,name,subject,markets,languages,scope,decision_intent",id:"eq."+project_id,workspace_id:"eq."+workspace_id,limit:"1"});
    const projectR=await db(request,env,auth.token,"research_projects?"+projectQ.toString());if(!projectR.ok)return json(request,{error:"project_lookup_failed"},502);
    const projectRows=await projectR.json();if(!projectRows.length)return json(request,{error:"project_not_found"},404);
-   const productQ=new URLSearchParams({select:"id,canonical_name,brand,model_number,category,identity_confidence",workspace_id:"eq."+workspace_id,project_id:"eq."+project_id,limit:"200"});
+   const productQ=new URLSearchParams({select:"id,canonical_name,brand,model_number,category,identity_confidence",workspace_id:"eq."+workspace_id,project_id:"eq."+project_id,limit:"201"});
    const productR=await db(request,env,auth.token,"product_entities?"+productQ.toString());if(!productR.ok)return json(request,{error:"product_lookup_failed"},502);
    const productRows=await productR.json();if(!productRows.length)return json(request,{error:"no_product_samples",message:"Extract products from project evidence before generating a report."},409);
    const productSampleTruncated=productRows.length>200;const products=productRows.slice(0,200);

@@ -134,7 +134,7 @@ function normalizeProductAttribute(key,value,unit){
  return {value_text:valueText,value_numeric:valueNumeric,unit:canonicalUnit,normalized_value:{raw_value:value,raw_unit:rawUnit,normalized_numeric:valueNumeric,normalized_unit:canonicalUnit}};
 }
 
-export default {
+const worker = {
  async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
@@ -606,13 +606,101 @@ export default {
    const runInsert=await db(request,env,auth.token,"research_runs","POST",{workspace_id:workspaceId,project_id:projectId,status:"planning",plan,coverage:{status:"not_started"},created_by:auth.user.id},"return=representation");
    if(!runInsert.ok)return json(request,{error:"research_run_save_failed"},502);
    const runRows=await runInsert.json();const run=runRows[0];
-   const taskRows=plan.workstreams.map(w=>({workspace_id:workspaceId,run_id:run.id,domain_code:w.domain_code,provider_id:Array.isArray(w.suggested_provider_ids)?w.suggested_provider_ids.find(id=>providers.some(p=>p[0]===id))||null:null,task_type:"evidence_discovery",status:"queued",input:w,output:{}}));
-   let tasksCreated=0;
-   if(taskRows.length){const taskInsert=await db(request,env,auth.token,"research_tasks","POST",taskRows,"return=representation");if(taskInsert.ok){const createdRows=await taskInsert.json();tasksCreated=createdRows.length;}}
+   const configuredResponse=await db(request,env,auth.token,"provider_connections?"+new URLSearchParams({select:"provider_id,secret_ref,status",workspace_id:"eq."+workspaceId}).toString());
+   const configuredRows=configuredResponse.ok?await configuredResponse.json():[];
+   const configuredProviders=new Map(configuredRows.filter(row=>row.secret_ref&&!["degraded","restricted","disabled"].includes(row.status)).map(row=>[row.provider_id,row]));
+   const supportedCollectors=new Set(["serpapi","dataforseo","google-ads","ebay-browse","youtube-data","reddit"]);
+   const domainFallback={D01:["ebay-browse"],D02:["serpapi","dataforseo","google-ads"],D03:["youtube-data","reddit"],D05:["serpapi"]};
+   const taskRows=plan.workstreams.map(w=>{
+    const suggested=Array.isArray(w.suggested_provider_ids)?w.suggested_provider_ids:[];
+    const candidates=[...suggested,...(domainFallback[w.domain_code]||[])].filter((id,index,all)=>supportedCollectors.has(id)&&all.indexOf(id)===index);
+    const providerId=candidates.find(id=>configuredProviders.has(id))||null;
+    return {workspace_id:workspaceId,run_id:run.id,domain_code:w.domain_code,provider_id:providerId,task_type:"evidence_discovery",status:providerId?"queued":"blocked",input:w,output:providerId?{}:{reason:"No configured and supported data collector is available for this workstream. Configure an eligible provider or import authorized evidence."}};
+   });
+   let tasksCreated=0,tasksEnqueued=0,tasksBlocked=0;
+   if(taskRows.length){
+    const taskInsert=await db(request,env,auth.token,"research_tasks","POST",taskRows,"return=representation");
+    if(!taskInsert.ok)return json(request,{error:"research_tasks_save_failed"},502);
+    const createdRows=await taskInsert.json();tasksCreated=createdRows.length;
+    for(const task of createdRows){
+     if(task.status==="blocked"){tasksBlocked++;continue;}
+     const tokenRef="research-task-token:"+task.id;
+     try{
+      await env.PROVIDER_SECRETS.put(tokenRef,await encryptSecret(env,auth.token),{expirationTtl:86400});
+      await env.RESEARCH_TASKS.send({task_id:task.id,workspace_id:workspaceId,project_id:projectId,run_id:run.id,provider_id:task.provider_id,token_ref:tokenRef,markets:project.markets||[],input:task.input||{}});
+      tasksEnqueued++;
+     }catch{
+      await env.PROVIDER_SECRETS.delete(tokenRef).catch(()=>{});
+      await db(request,env,auth.token,"research_tasks?id=eq."+task.id,"PATCH",{status:"failed",error_code:"queue_publish_failed",output:{reason:"The research task could not be published to the execution queue."}},"return=minimal");
+     }
+    }
+   }
    await db(request,env,auth.token,"research_projects?id=eq."+projectId,"PATCH",{status:"planning"},"return=minimal");
-   return json(request,{created:true,run_id:run.id,project_id:projectId,provider_id:connection.provider_id,model:generated.model,plan,tasks_created:tasksCreated,tasks_expected:taskRows.length});
+   return json(request,{created:true,run_id:run.id,project_id:projectId,provider_id:connection.provider_id,model:generated.model,plan,tasks_created:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked,tasks_expected:taskRows.length});
   }
   if(url.pathname.startsWith("/api/v1/"))return json(request,{error:"not_implemented",message:"This API capability is scheduled for the next implementation phase.",path:url.pathname},501);
   return json(request,{error:"not_found"},404);
  }
+ },
+ async queue(batch,env){
+  for(const message of batch.messages){
+   const payload=message.body||{};
+   const taskId=payload.task_id,workspaceId=payload.workspace_id,tokenRef=payload.token_ref;
+   if(typeof taskId!=="string"||typeof workspaceId!=="string"||typeof tokenRef!=="string"){message.ack();continue;}
+   const internalRequest=new Request("https://varuna.internal/queue");
+   let token=null;
+   try{
+    const encryptedToken=await env.PROVIDER_SECRETS.get(tokenRef);
+    if(!encryptedToken)throw new Error("task_authorization_expired");
+    token=await decryptSecret(env,encryptedToken);
+    const taskQuery=new URLSearchParams({select:"id,run_id,provider_id,status,input,attempt_count",id:"eq."+taskId,workspace_id:"eq."+workspaceId,limit:"1"});
+    const taskResponse=await db(internalRequest,env,token,"research_tasks?"+taskQuery.toString());
+    if(!taskResponse.ok)throw new Error("task_lookup_failed");
+    const taskRows=await taskResponse.json();
+    if(!taskRows.length){message.ack();continue;}
+    const task=taskRows[0];
+    if(["succeeded","partial","skipped","blocked"].includes(task.status)){await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;}
+    const attempt=Number(task.attempt_count||0)+1;
+    await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:"running",attempt_count:attempt,updated_at:new Date().toISOString(),error_code:null},"return=minimal");
+    const input=task.input||{};
+    const query=String(input.research_question||input.title||input.query||"product market research").trim().slice(0,300);
+    const geographyText=(Array.isArray(input.geographies)?input.geographies.join(" "):"")+" "+(Array.isArray(payload.markets)?payload.markets.join(" "):"");
+    const china=/china|中国|\bcn\b/i.test(geographyText);
+    const gl=china?"cn":"us",hl=china?"zh-cn":"en";
+    const routes={
+     "serpapi":{path:"/api/v1/collect/serpapi",body:{query,engine:task.domain_code==="D01"?"google_shopping":task.domain_code==="D05"?"google_trends":"google",gl,hl,limit:30}},
+     "dataforseo":{path:"/api/v1/collect/serp",body:{query,location_code:china?2156:2840,language_code:china?"zh_CN":"en"}},
+     "google-ads":{path:"/api/v1/collect/google-ads-keywords",body:{query,location_code:china?2156:2840,language_id:1000}},
+     "ebay-browse":{path:"/api/v1/collect/ebay",body:{query,marketplace_id:"EBAY_US",limit:30}},
+     "youtube-data":{path:"/api/v1/collect/youtube",body:{query,region_code:"US",language:"en",max_results:25}},
+     "reddit":{path:"/api/v1/collect/reddit",body:{query,limit:25}}
+    };
+    const route=routes[task.provider_id];
+    if(!route){
+     await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:"blocked",error_code:"collector_not_supported",output:{reason:"No execution adapter exists for the selected provider."},updated_at:new Date().toISOString()},"return=minimal");
+     await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;
+    }
+    const response=await worker.fetch(new Request("https://varuna.internal"+route.path,{method:"POST",headers:{"authorization":"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,project_id:payload.project_id,...route.body})}),env);
+    let result={};try{result=await response.json();}catch{}
+    if(!response.ok||result.error){
+     const permanent=response.status>=400&&response.status<500&&![408,425,429].includes(response.status);
+     const errorCode=String(result.error||"collector_http_"+response.status).slice(0,100);
+     await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:permanent?"blocked":"failed",error_code:errorCode,output:{http_status:response.status,error:result.error||"collector_failed"},updated_at:new Date().toISOString()},"return=minimal");
+     if(permanent){await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();}
+     else message.retry({delaySeconds:Math.min(300,15*attempt)});
+     continue;
+    }
+    await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:result.partial?"partial":"succeeded",error_code:null,output:result,updated_at:new Date().toISOString()},"return=minimal");
+    await env.PROVIDER_SECRETS.delete(tokenRef);
+    message.ack();
+   }catch(error){
+    if(token){
+     const errorCode=error instanceof Error?error.message:"task_execution_failed";
+     await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:"failed",error_code:errorCode.slice(0,100),updated_at:new Date().toISOString()},"return=minimal").catch(()=>{});
+    }
+    message.retry({delaySeconds:Math.min(300,15*(Number(message.attempts)||1))});
+   }
+  }
+ }
 };
+export default worker;

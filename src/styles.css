@@ -219,3 +219,8 @@
 .report-history-row small{font-size:11px;color:var(--muted,#667085)}
 .report-empty{padding:32px 16px}
 @media(max-width:640px){.generated-report,.report-history{padding:14px}.report-header{flex-direction:column}.report-header>small{text-align:left}.report-header h2{font-size:17px}.report-finding>div{align-items:flex-start;flex-direction:column}}
+
+
+.report-citations{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.report-citations a,.report-citations span{font-size:11px;color:var(--accent,#3974c6);padding:4px 7px;border:1px solid var(--line,#e6ebf0);border-radius:6px;text-decoration:none;overflow-wrap:anywhere}
+.report-citations a:hover{text-decoration:underline}

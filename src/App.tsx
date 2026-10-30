@@ -93,7 +93,7 @@ function Dashboard({session,supabase,signOut}:{session:Session;supabase:Supabase
   const [collectionResults,setCollectionResults] = useState<Record<string,{collected:number;observations_created:number;partial?:boolean;region_code:string}>>({});
   const [ebayResults,setEbayResults] = useState<Record<string,{collected:number;observations_created:number;partial?:boolean;marketplace_id:string}>>({});
   const [serpResults,setSerpResults] = useState<Record<string,{collected:number;observations_created:number;partial?:boolean;location_code:number}>>({});
-  const [serpApiResults,setSerpApiResults] = useState<Record<string,{collected:number;observations_created:number;partial?:boolean;engine:string;partial?:boolean}>>({});
+  const [serpApiResults,setSerpApiResults] = useState<Record<string,{collected:number;observations_created:number;partial?:boolean;engine:string}>>({});
   const [googleAdsResults,setGoogleAdsResults] = useState<Record<string,{collected:number;observations_created:number;partial?:boolean;location_code:number}>>({});
   const [planResults,setPlanResults] = useState<Record<string,{run_id:string;plan:{summary?:string;research_questions?:unknown[];workstreams?:unknown[]}}>>({});
   useEffect(()=>{let active=true;fetch(API_BASE+"/api/v1/health").then(r=>{if(!r.ok)throw new Error("API unavailable");return r.json();}).then(()=>{if(active)setApiStatus("online");}).catch(()=>{if(active)setApiStatus("error");});return()=>{active=false;};},[]);

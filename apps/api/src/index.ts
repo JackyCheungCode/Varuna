@@ -161,7 +161,7 @@ export default {
    let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"google_ads_secret_decryption_failed"},500);}
    if(!credentials.developer_token||!credentials.client_id||!credentials.client_secret||!credentials.refresh_token||!credentials.customer_id)return json(request,{error:"google_ads_oauth_json_required"},400);
    let accessToken;try{accessToken=await googleAdsAccessToken(credentials);}catch{return json(request,{error:"google_ads_oauth_failed"},502);}
-   const customer=String(credentials.customer_id).replace(/-/g,"");
+   const customer=String(credentials.customer_id).replace(/-/g,"");if(!/^\d{10}$/.test(customer))return json(request,{error:"google_ads_customer_id_invalid"},400);
    const headers={authorization:"Bearer "+accessToken,"developer-token":credentials.developer_token,"content-type":"application/json"};
    if(credentials.login_customer_id)headers["login-customer-id"]=String(credentials.login_customer_id).replace(/-/g,"");
    const requestBody={keywordSeed:{keywords:[query.trim()]},language:"languageConstants/"+String(language_id),geoTargetConstants:["geoTargetConstants/"+String(location_code)],keywordPlanNetwork:"GOOGLE_SEARCH",includeAdultKeywords:false,pageSize:100,historicalMetricsOptions:{includeAverageCpc:true}};

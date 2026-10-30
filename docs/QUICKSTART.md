@@ -1,12 +1,12 @@
 # Varuna Quick Start
 
-## 1. Open the preview application
+## 1. Open the production application
 
-- Branch preview: `https://docs-product-foundation.varuna-cu7.pages.dev`
-- API Worker: `https://varuna-api.xg-y.workers.dev`
+- Production app: `https://varuna-cu7.pages.dev`
+- API Worker: `https://varuna-api.xg-y.workers.dev` (API v0.5.2)
 - Supabase project: `dnvcmvfexaucyjlvtvbm` (EU West)
 
-The production branch is still `main`. This preview is isolated from production.
+The production release is deployed from the main branch. Preview deployments remain available for future feature branches.
 
 ## 2. Create an account
 
@@ -15,11 +15,11 @@ The production branch is still `main`. This preview is isolated from production.
 3. If Supabase email confirmation is enabled, confirm the email.
 
 Supabase Auth redirect allowlist must include the preview hostname. Recommended Auth URL Configuration:
-- Site URL: `https://docs-product-foundation.varuna-cu7.pages.dev`
-- Redirect URL: `https://docs-product-foundation.varuna-cu7.pages.dev/**`
+- Site URL: `https://varuna-cu7.pages.dev`
+- Redirect URL: `https://varuna-cu7.pages.dev/**`
 - Optional preview deployments: `https://*.varuna-cu7.pages.dev/**`
 
-If confirmation links redirect to an error page, check these Supabase Auth URL settings. Do not disable email verification just to bypass the redirect.
+If confirmation links redirect to an error page, check these Supabase Auth URL settings. Do not disable email verification just to bypass the redirect. Also verify that leaked-password protection is enabled in Supabase Auth before inviting additional users.
 
 ## 3. Create a research project
 

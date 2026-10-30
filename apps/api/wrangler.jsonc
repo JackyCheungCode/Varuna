@@ -41,6 +41,14 @@
         "retry_delay": 30,
         "max_concurrency": 2,
         "dead_letter_queue": "varuna-research-tasks-dlq"
+      },
+      {
+        "queue": "varuna-research-tasks-dlq",
+        "max_batch_size": 5,
+        "max_batch_timeout": 10,
+        "max_retries": 3,
+        "retry_delay": 60,
+        "max_concurrency": 1
       }
     ]
   }

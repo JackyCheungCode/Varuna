@@ -1,5 +1,7 @@
 # Varuna Quick Start
 
+Release version: 0.5.3.
+
 ## 1. Open the production application
 
 - Production app: `https://varuna-cu7.pages.dev`

@@ -617,7 +617,7 @@ const worker = {
     const providerId=candidates.find(id=>configuredProviders.has(id))||null;
     return {workspace_id:workspaceId,run_id:run.id,domain_code:w.domain_code,provider_id:providerId,task_type:"evidence_discovery",status:providerId?"queued":"blocked",input:w,output:providerId?{}:{reason:"No configured and supported data collector is available for this workstream. Configure an eligible provider or import authorized evidence."}};
    });
-   let tasksCreated=0,tasksEnqueued=0,tasksBlocked=0;
+   let tasksCreated=0,tasksEnqueued=0,tasksBlocked=0,tasksFailedToPublish=0;
    if(taskRows.length){
     const taskInsert=await db(request,env,auth.token,"research_tasks","POST",taskRows,"return=representation");
     if(!taskInsert.ok)return json(request,{error:"research_tasks_save_failed"},502);
@@ -631,11 +631,12 @@ const worker = {
       tasksEnqueued++;
      }catch{
       await env.PROVIDER_SECRETS.delete(tokenRef).catch(()=>{});
+      tasksFailedToPublish++;
       await db(request,env,auth.token,"research_tasks?id=eq."+task.id,"PATCH",{status:"failed",error_code:"queue_publish_failed",output:{reason:"The research task could not be published to the execution queue."}},"return=minimal");
      }
     }
    }
-   await db(request,env,auth.token,"research_runs?id=eq."+run.id,"PATCH",{status:tasksEnqueued?"running":"completed",coverage:{status:tasksEnqueued?"running":"blocked",tasks_total:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked},updated_at:new Date().toISOString()},"return=minimal");
+   await db(request,env,auth.token,"research_runs?id=eq."+run.id,"PATCH",{status:tasksEnqueued?"running":tasksFailedToPublish?"failed":"completed",coverage:{status:tasksEnqueued?"running":tasksFailedToPublish?"failed":"blocked",tasks_total:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked,tasks_failed_to_publish:tasksFailedToPublish},updated_at:new Date().toISOString()},"return=minimal");
    await db(request,env,auth.token,"research_projects?id=eq."+projectId,"PATCH",{status:"planning"},"return=minimal");
    return json(request,{created:true,run_id:run.id,project_id:projectId,provider_id:connection.provider_id,model:generated.model,plan,tasks_created:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked,tasks_expected:taskRows.length});
   }

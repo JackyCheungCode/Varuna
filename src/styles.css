@@ -33,3 +33,48 @@
   .evidence-metrics{gap:8px}
   .evidence-metrics .metric-card{min-width:0}
 }
+
+/* Guided research workflow */
+.section-kicker{font-size:9px;letter-spacing:1.25px;font-weight:750;color:#8b9bad;margin-bottom:8px}
+.research-project-picker h2,.research-workflow h2{font-size:17px;color:#243a52;margin:0 0 5px}
+.research-help{font-size:11px;color:#8997a6;margin:0 0 15px;line-height:1.6}
+.research-project-list{display:grid;gap:9px}
+.research-project-option{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:13px;border:1px solid #e5eaf0;border-radius:10px;background:#fff;color:#344b63;cursor:pointer;min-width:0}
+.research-project-option.selected{border-color:#6e91b4;background:#f5f9fd;box-shadow:0 0 0 2px #e8f0f8}
+.research-project-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:9px;background:#eef3f7;color:#6384a4;flex-shrink:0}
+.research-project-copy{display:grid;gap:4px;min-width:0;flex:1}
+.research-project-copy b{font-size:12px;overflow-wrap:anywhere}
+.research-project-copy small{font-size:10px;color:#8997a6;overflow-wrap:anywhere}
+.research-project-check{color:#6688a8;display:grid;place-items:center;flex-shrink:0}
+.research-workflow{margin-top:14px}
+.research-workflow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px}
+.text-btn{border:0;background:transparent;color:#54799d;font-size:11px;padding:7px;cursor:pointer}
+.research-field-label{display:block;font-size:11px;font-weight:700;color:#53677d;margin-bottom:7px}
+.research-channel-select{width:100%;min-height:46px;padding:0 12px;border:1px solid #dce4ec;border-radius:9px;background:#fff;color:#31475f;font-size:12px;outline:none}
+.research-channel-info{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px;padding:13px;border:1px solid #edf1f5;border-radius:9px;background:#fafbfd}
+.research-channel-info>div{display:grid;gap:4px;min-width:0}
+.research-channel-info b{font-size:11px;color:#40566e}
+.research-channel-info span{font-size:10px;color:#8a98a7;line-height:1.5}
+.connection-state{font-size:9px!important;white-space:nowrap;border-radius:20px;padding:5px 8px}
+.connection-state.connected{background:#e9f5ee;color:#397552}
+.connection-state.disconnected{background:#f2f3f5;color:#7f8994}
+.research-config-note{margin-top:10px;padding:10px 12px;border-radius:8px;background:#fff8e9;color:#8b6c32;font-size:10px;line-height:1.6}
+.research-step-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
+.research-step-actions .primary-btn,.research-step-actions .secondary-btn{min-height:40px}
+.research-result-panel{margin-top:16px;padding:13px;border:1px solid #e3ebf2;border-radius:9px;background:#f8fbfd}
+.research-result-panel>b{font-size:12px;color:#344b63}
+.research-result-panel p{font-size:10px;color:#5f7184;margin:8px 0}
+.research-result-panel small{font-size:9px;color:#8997a6;line-height:1.6}
+.research-next-step{margin-top:15px;padding:15px;border:1px dashed #d9e1e9;border-radius:9px;background:#fcfdfe}
+.research-next-step>b{font-size:12px;color:#40566e}
+.research-next-step p{font-size:10px;color:#75869a;line-height:1.7;margin:7px 0}
+.research-next-step>span{font-size:9px;color:#9aa6b2}
+@media(max-width:720px){
+ .research-project-option{gap:9px;padding:11px}
+ .research-project-icon{width:34px;height:34px}
+ .research-project-copy b{font-size:11px}
+ .research-project-option .status-tag{font-size:8px;padding:4px 6px}
+ .research-workflow-head{gap:6px}
+ .research-step-actions{display:grid;grid-template-columns:1fr}
+ .research-step-actions button{width:100%;justify-content:center}
+}

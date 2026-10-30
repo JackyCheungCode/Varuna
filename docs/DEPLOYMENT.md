@@ -44,6 +44,7 @@ The GitHub development branch is used for Pages preview builds. The production b
   - `POST /api/v1/collect/youtube` to collect authorized YouTube video metadata and engagement observations.
   - `POST /api/v1/collect/ebay` to collect eBay Browse listing observations.
   - `POST /api/v1/collect/serp` to collect licensed DataForSEO Google organic SERP snapshots.
+  - `POST /api/v1/collect/serpapi` to collect Google Search, Shopping, News, Maps or Trends evidence through the SerpApi engine adapter.
   - `POST /api/v1/collect/google-ads-keywords` to collect Google Ads Keyword Planner historical keyword metrics (API v26).
 - Credentials are never returned to the browser. The database stores only a KV reference and non-secret connection metadata. KV values contain authenticated AES-GCM ciphertext.
 

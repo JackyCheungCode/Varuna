@@ -76,7 +76,7 @@ function parseCsvRows(input:string):Array<Record<string,string>>{
   row.push(field);if(row.some(x=>x.trim()!==""))matrix.push(row);
   if(matrix.length<2)return [];
   const headers=matrix.shift()!.map(h=>h.trim());
-  return matrix.slice(0,500).map(values=>Object.fromEntries(headers.map((header,index)=>[header,(values[index]??"").trim()]).filter(([header,value])=>header&&value!=="")));
+  return matrix.slice(0,500).map(values=>{const record:Record<string,string>={};headers.forEach((header,index)=>{const value=(values[index]??"").trim();if(header&&value!=="")record[header]=value;});return record;});
 }
 function App() {
   const auth = useAuth();

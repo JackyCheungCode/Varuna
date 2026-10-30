@@ -4,3 +4,5 @@
 .config-buttons{display:flex;align-items:center;gap:7px}.status-tag.success{background:#eaf6ef;color:#478566}.status-tag.error{background:#fff0ee;color:#b45d54}.config-actions .secondary-btn.small{padding:8px 10px;font-size:10px}
 
 .project-row-expanded{flex-wrap:wrap}.project-row-expanded>.secondary-btn{margin-left:auto}.plan-result{flex:1 0 100%;margin:3px 0 2px 41px;padding:11px 13px;border:1px solid #e3ebf3;border-radius:7px;background:#f7fafc}.plan-result b{font-size:10px;color:#45617e}.plan-result p{font-size:10px;color:#5d7085;line-height:1.6;margin:5px 0}.plan-result span{font-size:9px;color:#8798a9}
+
+.credential-hint{margin:7px 0 10px;padding:8px 10px;border-radius:6px;background:#f5f8fb;color:#73869a;font-size:9px;line-height:1.6}

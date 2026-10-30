@@ -226,12 +226,13 @@ function Dashboard({session,supabase,signOut}:{session:Session;supabase:Supabase
   };
   const importCsvEvidence=async(file:File)=>{
     if(!workspaceId||!evidenceProject)return;
-    if(!file.name.toLowerCase().endsWith(".csv"))return notify("目前支持 CSV 文件，请先将 Excel 导出为 CSV UTF-8。");\n    if(file.size>5*1024*1024)return notify("单个 CSV 文件不能超过 5 MB，请拆分后分批导入。");
+    if(!file.name.toLowerCase().endsWith(".csv"))return notify("目前支持 CSV 文件，请先将 Excel 导出为 CSV UTF-8。");
+    if(file.size>5*1024*1024)return notify("单个 CSV 文件不能超过 5 MB，请拆分后分批导入。");
     setImportBusy(true);
     try{
-      const rows=parseCsvRows(await file.text());if(!rows.length)throw new Error("CSV 中没有可导入的数据行。");
+      const fileBuffer=await file.arrayBuffer();const digest=await crypto.subtle.digest("SHA-256",fileBuffer);const fileHash=Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,"0")).join("");const rows=parseCsvRows(new TextDecoder("utf-8").decode(fileBuffer));if(!rows.length)throw new Error("CSV 中没有可导入的数据行。");
       const project=projectRows.find(p=>p.id===evidenceProject.id);
-      const response=await fetch(API_BASE+"/api/v1/import/observations",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+session.access_token},body:JSON.stringify({workspace_id:workspaceId,project_id:evidenceProject.id,provider_id:importType,source_name:file.name,file_name:file.name,geography:project?.markets?.join(",")||"unknown",language:project?.markets?.includes("CN")?"zh-CN":"en",rows})});
+      const response=await fetch(API_BASE+"/api/v1/import/observations",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+session.access_token},body:JSON.stringify({workspace_id:workspaceId,project_id:evidenceProject.id,provider_id:importType,source_name:file.name,file_name:file.name,file_hash:fileHash,geography:project?.markets?.join(",")||"unknown",language:project?.markets?.includes("CN")?"zh-CN":"en",rows})});
       const result=await response.json();if(!response.ok)throw new Error(result.error||"csv_import_failed");
       notify("CSV 导入完成："+result.rows_imported+" 行、"+result.observations_inserted+" 条观测。");
       await loadProjectEvidence(evidenceProject);

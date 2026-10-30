@@ -57,7 +57,7 @@ function App() {
   const [modelDraft,setModelDraft] = useState<Record<string,string>>({});
   const [savedProviders,setSavedProviders] = useState<string[]>([]);
   const filteredProviders = useMemo(()=>providers.filter(p=>(providerFilter==="全部" || p.category===providerFilter) && (p.name+p.detail+p.domain).toLowerCase().includes(query.toLowerCase())),[providerFilter,query]);
-  const title = nav.flatMap(g=>g.items).find(i=>i.id===section)?.label ?? "总览";
+  const title: string = section === "settings" ? "配置中心" : section === "projects" ? "研究项目" : section === "market" ? "市场情报" : section === "products" ? "产品情报" : section === "voice" ? "客户声音" : section === "competitors" ? "竞争对手" : section === "suppliers" ? "供应链" : section === "opportunities" ? "产品机会" : section === "reports" ? "研究报告" : "总览";
   const notify=(message:string)=>{setToast(message);window.setTimeout(()=>setToast(""),3200);};
   const createProject=()=>{if(!projectName.trim())return;notify("研究项目草稿已创建。连接认证与数据库后将启用持久化创建。");setShowCreate(false);};
   const saveProvider=(name:string)=>{setSavedProviders(old=>old.includes(name)?old:[...old,name]);setKeyDraft(old=>({...old,[name]:""}));notify(name+" 配置草稿已暂存于当前页面；服务端密钥存储接口尚未启用，尚未写入数据库。");};

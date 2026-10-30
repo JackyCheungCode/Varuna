@@ -20,6 +20,7 @@ AI-powered Global Product Intelligence Platform.
 - docs/ARCHITECTURE.md
 - docs/DATA-GOVERNANCE.md
 - docs/ROADMAP.md
+- docs/CONFIGURATION-CENTER.md
 
 ## Product principles
 1. Every material finding is traceable to source evidence, collection time, and analysis version.
@@ -27,6 +28,7 @@ AI-powered Global Product Intelligence Platform.
 3. Use official APIs, licensed data, and permitted collection methods; comply with provider terms and applicable law.
 4. Never expose provider credentials, Supabase service-role credentials, or encryption keys in browser code.
 5. Human review is required before important product recommendations become approved decisions.
+6. Routine AI/API provider configuration is managed in the frontend; credentials are encrypted and used server-side only.
 
 ## Current status
 Product-foundation stage. Requirements and architecture are being established before production data collection or deployment.

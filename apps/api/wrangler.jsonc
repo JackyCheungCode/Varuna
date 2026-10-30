@@ -10,7 +10,8 @@
   "preview_urls": false,
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 1
+    "head_sampling_rate": 1,
+    "redact_query_string": true
   },
   "kv_namespaces": [
     {

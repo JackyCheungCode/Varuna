@@ -704,7 +704,7 @@ const worker = {
     const route=routes[task.provider_id];
     if(!route){
      await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:"blocked",error_code:"collector_not_supported",output:{reason:"No execution adapter exists for the selected provider."},updated_at:new Date().toISOString()},"return=minimal");
-     await finalizeRun(internalRequest,env,token,workspaceId,payload.run_id||task.run_id);
+     await finalizeRun(internalRequest,token,workspaceId,payload.run_id||task.run_id);
      await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;
     }
     const response=await worker.fetch(new Request("https://varuna.internal"+route.path,{method:"POST",headers:{"authorization":"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,project_id:payload.project_id,run_id:payload.run_id,...route.body})}),env);

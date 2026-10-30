@@ -77,7 +77,7 @@ async function generateAI(providerId,credentials,config,input){
  if(providerId==="workers-ai"){
   const accountId=credentials.account_id;const token=credentials.api_token||credentials.api_key||credentials.key;
   if(!accountId||!token)throw new Error("provider_key_missing");
-  const response=await fetch("https://api.cloudflare.com/client/v4/accounts/"+encodeURIComponent(accountId)+"/ai/run/"+encodeURIComponent(model),{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({messages:[{role:"system",content:system},{role:"user",content:prompt}],max_tokens:Math.min(Math.max(Number(input.max_output_tokens)||4096,128),8192)}),signal:AbortSignal.timeout(60000)});
+  const modelPath=String(model).split("/").map(encodeURIComponent).join("/");const response=await fetch("https://api.cloudflare.com/client/v4/accounts/"+encodeURIComponent(accountId)+"/ai/run/"+modelPath,{method:"POST",headers:{authorization:"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({messages:[{role:"system",content:system},{role:"user",content:prompt}],max_tokens:Math.min(Math.max(Number(input.max_output_tokens)||4096,128),8192)}),signal:AbortSignal.timeout(60000)});
   if(!response.ok)throw new Error("ai_provider_http_"+response.status);
   const data=await response.json();return{text:data.result?.response||data.result?.output||JSON.stringify(data.result||{}),usage:data.result?.usage||{},model};
  }

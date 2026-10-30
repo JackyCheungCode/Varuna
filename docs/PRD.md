@@ -65,6 +65,13 @@ Report includes executive summary, market scope, method, source coverage, compet
 - FR-10 Governance: role-based access, organization isolation, audit events, connector health, retries, dead-letter handling, usage/cost accounting, retention, and deletion.
 - FR-11 Localization: Chinese and English initially; locale-aware currency, units, dates, time zones, and translated taxonomies; extensible to more languages.
 
+## FR-12 Configuration Center
+- Manage AI/model providers, search APIs, marketplace/product-data APIs, review/social sources, enrichment services, and optional infrastructure integrations from the authenticated frontend.
+- Provide provider-specific forms, credential validation, server-side connection tests, enable/disable, credential rotation, model routing, fallback policies, market/locale scope, budgets, quotas, and health status.
+- Never require code edits or redeployment for routine provider/model credential changes. Clearly identify account-level bootstrap secrets and bindings as deployment-level exceptions.
+- Display status and masked metadata only; stored secrets are never returned to browser clients. Only Owner/Admin can manage organization credentials.
+- Audit all credential lifecycle and configuration changes without recording secret values.
+
 ## Non-functional requirements
 Security: server-side secrets, least privilege, RLS on exposed tables, tenant isolation, audit logging, validation, secure webhook verification.
 Reliability: idempotent jobs, bounded retries/backoff, dead-letter queues, resumable workflows, explicit terminal states.

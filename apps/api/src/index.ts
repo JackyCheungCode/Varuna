@@ -636,7 +636,7 @@ const worker = {
      }
     }
    }
-   await db(request,env,auth.token,"research_runs?id=eq."+run.id,"PATCH",{status:tasksEnqueued?"running":tasksFailedToPublish?"failed":"completed",coverage:{status:tasksEnqueued?"running":tasksFailedToPublish?"failed":"blocked",tasks_total:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked,tasks_failed_to_publish:tasksFailedToPublish},updated_at:new Date().toISOString()},"return=minimal");
+   await db(request,env,auth.token,"research_runs?id=eq."+run.id,"PATCH",{status:tasksEnqueued?"running":tasksFailedToPublish?"failed":"completed",coverage:{status:tasksEnqueued?"running":tasksFailedToPublish?"failed":"blocked",tasks_total:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked,tasks_failed_to_publish:tasksFailedToPublish},started_at:tasksEnqueued?new Date().toISOString():null,finished_at:tasksEnqueued?null:new Date().toISOString()},"return=minimal");
    await db(request,env,auth.token,"research_projects?id=eq."+projectId,"PATCH",{status:"planning"},"return=minimal");
    return json(request,{created:true,run_id:run.id,project_id:projectId,provider_id:connection.provider_id,model:generated.model,plan,tasks_created:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked,tasks_expected:taskRows.length});
   }
@@ -657,7 +657,7 @@ const worker = {
    const blocked=rows.filter(x=>x.status==="blocked").length;
    const failed=rows.filter(x=>x.status==="failed").length;
    const status=succeeded+partial+blocked>0?"completed":"failed";
-   await db(request,env,token,"research_runs?id=eq."+runId+"&workspace_id=eq."+workspaceId,"PATCH",{status,coverage:{status,tasks_total:rows.length,tasks_succeeded:succeeded,tasks_partial:partial,tasks_blocked:blocked,tasks_failed:failed},updated_at:new Date().toISOString()},"return=minimal");
+   await db(request,env,token,"research_runs?id=eq."+runId+"&workspace_id=eq."+workspaceId,"PATCH",{status,coverage:{status,tasks_total:rows.length,tasks_succeeded:succeeded,tasks_partial:partial,tasks_blocked:blocked,tasks_failed:failed},finished_at:new Date().toISOString()},"return=minimal");
   };
   const deadLetterBatch=batch.queue==="varuna-research-tasks-dlq";
   for(const message of batch.messages){

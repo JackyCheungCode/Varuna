@@ -426,7 +426,10 @@ export default {
     const mpn=typeof product.mpn==="string"?product.mpn.trim():null;
     const identityBase=gtin?"gtin:"+gtin:mpn?"mpn:"+[brand||"",mpn].join(":"):modelNumber?"model:"+[brand||"",modelNumber].join(":"):"name:"+product.canonical_name.toLowerCase().normalize("NFKC").replace(/[^a-z0-9\u4e00-\u9fff]+/g," ").trim().replace(/\s+/g," ");
     const identityKey=identityBase.slice(0,500);
-    const entity={workspace_id,project_id,canonical_name:product.canonical_name.trim().slice(0,300),brand,model_number:modelNumber,gtin,mpn,category:typeof product.category==="string"?product.category.slice(0,160):null,identity_key:identityKey,identity_method:typeof product.identity_method==="string"?product.identity_method.slice(0,60):"normalized_name",identity_confidence:Math.min(1,Math.max(0,Number.isFinite(Number(product.identity_confidence))?Number(product.identity_confidence):0.5)),last_observed_at:new Date().toISOString()};
+    const citedId=Array.isArray(product.attributes)?product.attributes.flatMap(a=>Array.isArray(a?.evidence_observation_ids)?a.evidence_observation_ids:[]).find(id=>allowedObservationIds.has(id)):null;
+    const citedObservation=citedId?observations.find(o=>o.id===citedId):null;
+    const canonicalUrl=citedObservation?sourceById[citedObservation.source_id]?.source_url||null:null;
+    const entity={workspace_id,project_id,canonical_name:product.canonical_name.trim().slice(0,300),brand,model_number:modelNumber,gtin,mpn,category:typeof product.category==="string"?product.category.slice(0,160):null,canonical_url:canonicalUrl,identity_key:identityKey,identity_method:typeof product.identity_method==="string"?product.identity_method.slice(0,60):"normalized_name",identity_confidence:Math.min(1,Math.max(0,Number.isFinite(Number(product.identity_confidence))?Number(product.identity_confidence):0.5)),last_observed_at:new Date().toISOString()};
     const upsert=await db(request,env,auth.token,"product_entities?on_conflict=project_id,identity_key","POST",entity,"resolution=merge-duplicates,return=representation");
     if(!upsert.ok)continue;const rows=await upsert.json();const saved=rows[0];if(!saved)continue;
     savedProducts.push(saved);

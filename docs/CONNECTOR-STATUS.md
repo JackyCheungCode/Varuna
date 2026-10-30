@@ -17,6 +17,7 @@ This document separates catalog availability from actual implementation. A provi
 | YouTube Data API | API key | Yes | Public video search/details, source records and observations |
 | eBay Browse API | JSON: client_id, client_secret, optional environment | OAuth test | Item search, listing price and product attributes |
 | DataForSEO | JSON: username, password | Yes | Google organic SERP snapshot, rank and page observations |
+| Google Ads Keyword Planner | JSON: developer_token, client_id, client_secret, refresh_token, customer_id, optional login_customer_id | OAuth/account test | Keyword ideas, average monthly searches, advertising competition and bid ranges through Google Ads API v26 |
 | Reddit API | JSON: client_id, client_secret, optional user_agent | OAuth test | Credentials test only; collection adapter pending |
 
 ## Additional live collection adapters
@@ -34,7 +35,7 @@ The following providers are registered in the catalog and can be securely config
 - Amazon SP-API and Creators API
 - Walmart Marketplace APIs
 - Alibaba.com, 1688, Taobao/Tmall TOP, JD Open Platform, Pinduoduo Open Platform
-- Google Ads Keyword Planning, Bing Search, Baidu Marketing
+- Bing Search, Baidu Marketing
 - X API, Bilibili, TikTok Research API, Xiaohongshu partner access, Douyin Open Platform
 - Google Trends, Similarweb, Semrush, Ahrefs
 - Trade/customs datasets, standards/certification registries, company intelligence

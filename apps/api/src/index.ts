@@ -133,6 +133,35 @@ export default {
 
 
 
+
+  if(url.pathname==="/api/v1/collect/serp"&&request.method==="POST"){
+   const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
+   let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}
+   const {workspace_id,project_id,query,location_code=2840,language_code="en",depth=20}=body||{};
+   if(typeof workspace_id!=="string"||typeof project_id!=="string"||typeof query!=="string"||!query.trim()||query.length>300)return json(request,{error:"invalid_collection_request"},400);
+   const member=await membership(request,env,auth.token,auth.user.id,workspace_id);if(!member||!["owner","admin","researcher"].includes(member.role))return json(request,{error:"workspace_researcher_required"},403);
+   const projectQuery=new URLSearchParams({select:"id",id:"eq."+project_id,workspace_id:"eq."+workspace_id,limit:"1"});
+   const projectCheck=await db(request,env,auth.token,"research_projects?"+projectQuery.toString());if(!projectCheck.ok||!(await projectCheck.json()).length)return json(request,{error:"project_not_found"},404);
+   const connectionQuery=new URLSearchParams({select:"secret_ref",workspace_id:"eq."+workspace_id,provider_id:"eq.dataforseo",limit:"1"});
+   const connectionResponse=await db(request,env,auth.token,"provider_connections?"+connectionQuery.toString());if(!connectionResponse.ok)return json(request,{error:"provider_lookup_failed"},502);
+   const connections=await connectionResponse.json();if(!connections.length||!connections[0].secret_ref)return json(request,{error:"dataforseo_not_configured"},409);
+   const encrypted=await env.PROVIDER_SECRETS.get(connections[0].secret_ref);if(!encrypted)return json(request,{error:"dataforseo_secret_missing"},404);
+   let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"dataforseo_secret_decryption_failed"},500);}
+   if(!credentials.username||!credentials.password)return json(request,{error:"dataforseo_login_required"},400);
+   const requestBody=[{keyword:query.trim(),location_code:Number(location_code),language_code:String(language_code),depth:Math.min(Math.max(Number(depth)||20,10),100),device:"desktop",os:"windows"}];
+   let data;
+   try{const response=await fetch("https://api.dataforseo.com/v3/serp/google/organic/live/advanced",{method:"POST",headers:{authorization:"Basic "+btoa(credentials.username+":"+credentials.password),"content-type":"application/json"},body:JSON.stringify(requestBody),signal:AbortSignal.timeout(30000)});if(!response.ok)return json(request,{error:safeProviderError(response.status),message:"DataForSEO SERP request failed. Check API balance, credentials, and endpoint access."},502);data=await response.json();}
+   catch{return json(request,{error:"dataforseo_network_error"},502);}
+   const task=data.tasks?.[0];if(!task||task.status_code!==20000)return json(request,{error:"dataforseo_task_failed",provider_status:task?.status_code||null},502);
+   const items=task.result?.[0]?.items||[];const organic=items.filter(item=>item.type==="organic");
+   if(!organic.length)return json(request,{collected:0,observations_created:0,limitations:["No organic results were returned for this keyword and location."]});
+   const sources=organic.map((item,index)=>({workspace_id,project_id,provider_id:"dataforseo",source_name:"Google Organic SERP via DataForSEO",external_id:query.trim()+":"+String(item.rank_absolute||index+1)+":"+(item.url||""),source_url:item.url||null,published_at:null,geography:String(location_code),language:String(language_code),rights_status:"licensed",retention_policy:"Follow the active DataForSEO subscription, API terms, storage and display license.",provenance:{endpoint:"/v3/serp/google/organic/live/advanced",keyword:query,location_code,language_code,rank_absolute:item.rank_absolute,rank_group:item.rank_group,item_type:item.type},quality:{sampling_method:"Google organic SERP snapshot at a specified location/language",sample_size:organic.length,metric_semantics:"Search ranking and visibility are discovery signals, not product sales or market share."}}));
+   const sourceInsert=await db(request,env,auth.token,"evidence_sources","POST",sources,"return=representation");if(!sourceInsert.ok)return json(request,{error:"evidence_source_save_failed"},502);
+   const savedSources=await sourceInsert.json();const observations=[];
+   for(let i=0;i<organic.length;i++){const item=organic[i];const source=savedSources[i];const values=[["rank_group",item.rank_group,"rank"],["rank_absolute",item.rank_absolute,"rank"],["title",item.title,"text"],["description",item.description,"text"],["domain",item.domain,"domain"],["url",item.url,"url"],["breadcrumb",item.breadcrumb,"text"],["item_type",item.type,"type"]];for(const [attribute,value,unit] of values){if(value===undefined||value===null)continue;observations.push({workspace_id,source_id:source.id,entity_type:"web_search_result",entity_key:item.url||String(item.rank_absolute||i),attribute_key:attribute,raw_value:value,normalized_value:value,unit,metric_type:"observed",geography:String(location_code),confidence_rationale:"Direct SERP snapshot returned by the licensed DataForSEO API; ranking varies by location, language and time."});}}
+   let observationCount=0;let partial=false;if(observations.length){const saved=await db(request,env,auth.token,"evidence_observations","POST",observations,"return=representation");if(saved.ok){const rows=await saved.json();observationCount=rows.length;}else partial=true;}
+   return json(request,{partial,collected:savedSources.length,observations_created:observationCount,provider:"dataforseo",query,location_code,language_code,limitations:["SERP results are a time- and location-specific ranked sample, not sales or market size.","DataForSEO API units and subscription costs apply.","Organic results do not represent all search channels or all consumers."]});
+  }
   if(url.pathname==="/api/v1/collect/ebay"&&request.method==="POST"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
    let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}

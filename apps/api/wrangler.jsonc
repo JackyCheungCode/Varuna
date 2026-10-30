@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "varuna-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-30",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "ai": { "binding": "AI" },
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "PROVIDER_SECRETS",
+      "id": "141c8d9e83bd45d8a7354f75a8917665"
+    }
+  ],
+  "vars": {
+    "VARUNA_ENV": "production",
+    "SUPABASE_URL": "https://dnvcmvfexaucyjlvtvbm.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_MnnkG92jRMxKTGXdBTBOuw_gKB30Cz-"
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "RESEARCH_TASKS",
+        "queue": "varuna-research-tasks"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "varuna-research-tasks",
+        "max_batch_size": 5,
+        "max_batch_timeout": 10,
+        "max_retries": 5,
+        "retry_delay": 30,
+        "max_concurrency": 2,
+        "dead_letter_queue": "varuna-research-tasks-dlq"
+      }
+    ]
+  }
+}

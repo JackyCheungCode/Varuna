@@ -1,0 +1,46 @@
+name: Varuna CI
+on:
+  pull_request:
+  push:
+    branches: [main, docs/product-foundation]
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate Worker module syntax
+        run: |
+          cp apps/api/src/index.ts /tmp/varuna-worker.mjs
+          node --check /tmp/varuna-worker.mjs
+      - name: Validate Wrangler configuration JSONC and queue safety
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const text = fs.readFileSync('apps/api/wrangler.jsonc', 'utf8')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/,\s*([}\]])/g, (_, c) => c);
+          const config = JSON.parse(text);
+          const producers = config.queues?.producers || [];
+          const consumers = config.queues?.consumers || [];
+          if (!producers.some(x => x.binding === 'RESEARCH_TASKS' && x.queue === 'varuna-research-tasks')) throw new Error('Research queue producer binding missing');
+          const consumer = consumers.find(x => x.queue === 'varuna-research-tasks');
+          if (!consumer) throw new Error('Research queue consumer missing');
+          if (consumer.max_retries < 1 || !consumer.dead_letter_queue) throw new Error('Queue retry/DLQ policy missing');
+          if (!config.kv_namespaces?.some(x => x.binding === 'PROVIDER_SECRETS')) throw new Error('Credential vault binding missing');
+          NODE

@@ -407,7 +407,8 @@ export default {
    let generated;try{generated=await generateAI(provider_id,credentials,connections[0].config||{},{model,task_type:"product_attribute_extraction",system_prompt:system,prompt,max_output_tokens:8192},env);}catch(error){return json(request,{error:"product_extraction_ai_failed",detail:error instanceof Error?error.message:"unknown"},502);}
    let parsed;try{parsed=parseModelJSON(generated.text);}catch{return json(request,{error:"product_extraction_invalid_json"},502);}
    const products=Array.isArray(parsed?.products)?parsed.products.slice(0,100):[];
-   const allowedObservationIds=new Set(observations.map(o=>o.id));\n   const allowedAttributeKeys=new Set(["connector","usb_protocol","data_rate","charging_power","e_marker","length","material","certification","color","compatibility","price","currency","rating","review_count","brand","model_number","gtin","mpn","category"]);
+   const allowedObservationIds=new Set(observations.map(o=>o.id));
+   const allowedAttributeKeys=new Set(["connector","usb_protocol","data_rate","charging_power","e_marker","length","material","certification","color","compatibility","price","currency","rating","review_count","brand","model_number","gtin","mpn","category"]);
    const savedProducts=[];let attributeCount=0;
    for(const product of products){
     if(!product||typeof product.canonical_name!=="string"||product.canonical_name.trim().length<2)continue;

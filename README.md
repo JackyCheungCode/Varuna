@@ -31,6 +31,7 @@ Varuna is not simply an API aggregator or AI report writer. It is a decision sys
 - docs/RESEARCH-METHODOLOGY.md
 - docs/PRODUCT-BLUEPRINT.md
 - docs/CONNECTOR-STATUS.md
+- docs/QUICKSTART.md
 
 ## Product principles
 1. Research is decision-first, multi-source, multilingual, and adaptive to the product and market.

@@ -635,6 +635,7 @@ const worker = {
      }
     }
    }
+   await db(request,env,auth.token,"research_runs?id=eq."+run.id,"PATCH",{status:tasksEnqueued?"running":"completed",coverage:{status:tasksEnqueued?"running":"blocked",tasks_total:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked},updated_at:new Date().toISOString()},"return=minimal");
    await db(request,env,auth.token,"research_projects?id=eq."+projectId,"PATCH",{status:"planning"},"return=minimal");
    return json(request,{created:true,run_id:run.id,project_id:projectId,provider_id:connection.provider_id,model:generated.model,plan,tasks_created:tasksCreated,tasks_enqueued:tasksEnqueued,tasks_blocked:tasksBlocked,tasks_expected:taskRows.length});
   }
@@ -642,6 +643,22 @@ const worker = {
   return json(request,{error:"not_found"},404);
   },
  async queue(batch,env){
+  const finalizeRun=async(request,token,workspaceId,runId)=>{
+   if(!runId)return;
+   const q=new URLSearchParams({select:"status,error_code",workspace_id:"eq."+workspaceId,run_id:"eq."+runId});
+   const response=await db(request,env,token,"research_tasks?"+q.toString());
+   if(!response.ok)return;
+   const rows=await response.json();
+   const active=rows.some(x=>x.status==="queued"||x.status==="running"||(x.status==="failed"&&!["max_retries_exceeded","queue_publish_failed"].includes(x.error_code)));
+   if(active)return;
+   const succeeded=rows.filter(x=>x.status==="succeeded").length;
+   const partial=rows.filter(x=>x.status==="partial").length;
+   const blocked=rows.filter(x=>x.status==="blocked").length;
+   const failed=rows.filter(x=>x.status==="failed").length;
+   const status=succeeded+partial+blocked>0?"completed":"failed";
+   await db(request,env,token,"research_runs?id=eq."+runId+"&workspace_id=eq."+workspaceId,"PATCH",{status,coverage:{status,tasks_total:rows.length,tasks_succeeded:succeeded,tasks_partial:partial,tasks_blocked:blocked,tasks_failed:failed},updated_at:new Date().toISOString()},"return=minimal");
+  };
+  const deadLetterBatch=batch.queue==="varuna-research-tasks-dlq";
   for(const message of batch.messages){
    const payload=message.body||{};
    const taskId=payload.task_id,workspaceId=payload.workspace_id,tokenRef=payload.token_ref;
@@ -659,6 +676,11 @@ const worker = {
     if(!taskRows.length){message.ack();continue;}
     const task=taskRows[0];
     if(["succeeded","partial","skipped","blocked"].includes(task.status)){await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;}
+    if(deadLetterBatch){
+     await db(internalRequest,env,token,"research_tasks?id=eq."+taskId+"&workspace_id=eq."+workspaceId,"PATCH",{status:"failed",error_code:"max_retries_exceeded",output:{reason:"The task was moved to the dead-letter queue after exhausting its retry policy."},updated_at:new Date().toISOString()},"return=minimal");
+     await finalizeRun(internalRequest,token,workspaceId,payload.run_id||task.run_id);
+     await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;
+    }
     const now=new Date();
     const claimFilter=task.status==="running"?"&status=eq.running&updated_at=lt."+encodeURIComponent(new Date(now.getTime()-10*60*1000).toISOString()):"&status=in.(queued,failed)";
     const attempt=Number(task.attempt_count||0)+1;
@@ -682,6 +704,7 @@ const worker = {
     const route=routes[task.provider_id];
     if(!route){
      await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:"blocked",error_code:"collector_not_supported",output:{reason:"No execution adapter exists for the selected provider."},updated_at:new Date().toISOString()},"return=minimal");
+     await finalizeRun(internalRequest,env,token,workspaceId,payload.run_id||task.run_id);
      await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;
     }
     const response=await worker.fetch(new Request("https://varuna.internal"+route.path,{method:"POST",headers:{"authorization":"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,project_id:payload.project_id,run_id:payload.run_id,...route.body})}),env);
@@ -690,11 +713,12 @@ const worker = {
      const permanent=response.status>=400&&response.status<500&&![408,425,429].includes(response.status);
      const errorCode=String(result.error||"collector_http_"+response.status).slice(0,100);
      await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:permanent?"blocked":"failed",error_code:errorCode,output:{http_status:response.status,error:result.error||"collector_failed"},updated_at:new Date().toISOString()},"return=minimal");
-     if(permanent){await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();}
+     if(permanent){await finalizeRun(internalRequest,token,workspaceId,payload.run_id||task.run_id);await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();}
      else message.retry({delaySeconds:Math.min(300,15*attempt)});
      continue;
     }
     await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:result.partial?"partial":"succeeded",error_code:null,output:result,updated_at:new Date().toISOString()},"return=minimal");
+    await finalizeRun(internalRequest,token,workspaceId,payload.run_id||task.run_id);
     await env.PROVIDER_SECRETS.delete(tokenRef);
     message.ack();
    }catch(error){

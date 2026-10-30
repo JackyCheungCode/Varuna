@@ -31,3 +31,7 @@ AI outputs use validated structured schemas. Treat source content as untrusted i
 
 ## Security and retention
 Provider secrets and encryption keys are server-side only. Use tenant-aware authorization and RLS. Apply least privilege and audit credential changes and sensitive exports. Define retention per source before collection; support deletion requests and purge raw objects and derived data where required. Never put secrets, personal data, or real provider payloads in fixtures or Git.
+
+
+## Integration configuration governance
+Only Owner/Admin roles can create, test, enable, disable, rotate, or delete organization integrations. Configuration APIs verify organization membership and role on every request. Store provider credentials separately from ordinary settings, encrypt before persistence, version encryption keys, and never return stored secret values. Test connections server-side with bounded requests and redact provider error bodies. Audit actor, provider, action, outcome, and changed field names without secret material. Credential tables must not be directly readable or writable through browser-facing Data APIs. Apply per-provider quotas, per-organization budgets, rate limits, and circuit breakers. Routine provider configuration must be possible through the UI; account-level bootstrap secrets remain deployment-managed and are documented as such.

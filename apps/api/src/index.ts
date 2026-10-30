@@ -138,7 +138,7 @@ const worker = {
  async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
-  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.5.0",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY),workersAI:Boolean(env.AI),researchQueue:Boolean(env.RESEARCH_TASKS)}});
+  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.5.1",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY),workersAI:Boolean(env.AI),researchQueue:Boolean(env.RESEARCH_TASKS)}});
   if(url.pathname==="/api/v1/catalog")return json(request,{domains:domains.map(([id,name,label])=>({id,name,label})),providers:providers.map(([id,name,domain,category,capabilities])=>({id,name,domain,category,capabilities:capabilities.split(","),status:"not_configured"}))});
   if(url.pathname==="/api/v1/providers"&&request.method==="GET"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);

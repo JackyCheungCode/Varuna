@@ -72,6 +72,13 @@ Require schema-constrained outputs, prompt/model versioning, token/cost tracking
 - Apply source-specific privacy, copyright, retention, and deletion policies.
 - Do not deploy unreviewed schema changes to a live project.
 
+## Frontend-managed integration configuration
+The web app provides Settings > Integrations. Provider adapters expose versioned configuration schemas and server-side test operations; the UI renders forms from safe schema metadata. Organization settings and provider secret material are stored separately. The Worker validates JWT + organization membership + Owner/Admin role before any credential operation. Test calls execute only in the Worker and return redacted diagnostics.
+
+Secret material is encrypted before database persistence using authenticated encryption (AES-256-GCM or reviewed equivalent), with a high-entropy key held only as a Worker secret and explicit key versions for rotation. A secret-store/KMS abstraction isolates encryption from provider adapters. Ciphertext tables live in a private schema or are otherwise inaccessible to browser roles through grants and RLS. Never expose plaintext, ciphertext, master keys, Supabase service-role credentials, or raw provider errors to the browser. Log only integration IDs, operation metadata, sanitized outcomes, and correlation IDs. A compromised Worker/master key remains a security boundary and must be addressed with least privilege, rotation, monitoring, and incident response.
+
+Normal provider credentials, model selections, routing, budgets, regions, and connector scopes are editable without code changes or redeployment. Account-level bootstrap secrets and platform bindings (for example, initial Supabase/Cloudflare identity and encryption bootstrap) are explicit deployment-level exceptions, not ordinary provider settings. A guided setup screen explains those exceptions.
+
 ## Environments and deployment
 Local uses mocked providers and synthetic fixtures. Preview uses isolated data and non-production credentials. Production uses separate credentials, reviewed migrations, monitoring, backups, retention, and rollback. CI runs install from lockfile, lint, typecheck, tests, build, migration checks, and dependency/security checks. Pages deploys web; Workers deploy API/jobs.
 

@@ -65,7 +65,8 @@ function parseModelJSON(text){
  const cleaned=String(text||"").trim().replace(/^\`\`\`(?:json)?\s*/i,"").replace(/\s*\`\`\`$/,"");
  return JSON.parse(cleaned);
 }
-\nexport default {
+
+export default {
  async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});

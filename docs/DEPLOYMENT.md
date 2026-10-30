@@ -23,11 +23,19 @@
 
 The GitHub development branch is used for Pages preview builds. The production branch remains `main`; do not promote an unreviewed preview to production. Confirm build success, API health, authentication, RLS, provider credential encryption, and backup/restore before production promotion.
 
-## Required server-side configuration (not yet enabled)
+## Credential vault
 
-- Supabase project URL and publishable/anon key for authenticated client flows.
-- A server-only service credential or a narrowly scoped alternative for trusted backend operations.
-- A high-entropy credential encryption key, stored as a Cloudflare Worker secret.
-- Provider API keys entered only after the credential vault endpoint and encryption tests are implemented.
+- Cloudflare KV namespace: `varuna-provider-secrets` (EU jurisdiction).
+- Worker secret binding: `CREDENTIAL_ENCRYPTION_KEY` (random 256-bit key, AES-GCM).
+- Worker bindings: `PROVIDER_SECRETS`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`.
+- Authenticated API endpoints:
+  - `GET /api/v1/providers?workspace_id=...`
+  - `POST /api/v1/providers` to encrypt and save provider credentials.
+  - `POST /api/v1/providers/{provider_id}/test` to validate supported credentials.
+- Credentials are never returned to the browser. The database stores only a KV reference and non-secret connection metadata. KV values contain authenticated AES-GCM ciphertext.
+
+## Current provider validation coverage
+
+Automatic validation is implemented for OpenAI, Anthropic, Gemini, DeepSeek, YouTube Data API, DataForSEO (username/password JSON), eBay OAuth client credentials, and Reddit OAuth client credentials. Other provider entries can be securely saved but remain `configured` until their specific authorization, signing, eligibility, and test adapter is implemented. A saved key does not mean the provider is connected.
 
 Never commit secrets or paste provider credentials into browser local storage. Never expose Supabase service-role credentials in Pages build variables or client bundles.

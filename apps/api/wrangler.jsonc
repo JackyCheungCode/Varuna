@@ -7,5 +7,12 @@
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": true, "head_sampling_rate": 1 },
-  "vars": { "VARUNA_ENV": "preview" }
+  "kv_namespaces": [
+    { "binding": "PROVIDER_SECRETS", "id": "141c8d9e83bd45d8a7354f75a8917665" }
+  ],
+  "vars": {
+    "VARUNA_ENV": "preview",
+    "SUPABASE_URL": "https://dnvcmvfexaucyjlvtvbm.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_MnnkG92jRMxKTGXdBTBOuw_gKB30Cz-"
+  }
 }

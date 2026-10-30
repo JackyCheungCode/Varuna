@@ -6,3 +6,30 @@
 .project-row-expanded{flex-wrap:wrap}.project-row-expanded>.secondary-btn{margin-left:auto}.plan-result{flex:1 0 100%;margin:3px 0 2px 41px;padding:11px 13px;border:1px solid #e3ebf3;border-radius:7px;background:#f7fafc}.plan-result b{font-size:10px;color:#45617e}.plan-result p{font-size:10px;color:#5d7085;line-height:1.6;margin:5px 0}.plan-result span{font-size:9px;color:#8798a9}
 
 .credential-hint{margin:7px 0 10px;padding:8px 10px;border-radius:6px;background:#f5f8fb;color:#73869a;font-size:9px;line-height:1.6}
+
+
+/* Evidence viewer: keep the dialog above its backdrop and usable on small screens. */
+.modal-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;overflow-y:auto;overscroll-behavior:contain;padding:16px 12px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.modal-backdrop>.modal{position:relative;z-index:1001;flex:0 1 auto;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+.evidence-modal{width:min(960px,100%);max-height:calc(100dvh - 32px);padding:clamp(16px,3vw,24px)}
+.evidence-modal .modal-head{position:sticky;top:-1px;z-index:2;background:#fff;padding-bottom:8px}
+.evidence-modal .modal-head h2{overflow-wrap:anywhere}
+.evidence-metrics{grid-template-columns:repeat(2,minmax(0,1fr));margin:10px 0 14px}
+.evidence-table-wrap{width:100%;max-width:100%;overflow:auto;border:1px solid #e8edf2;border-radius:8px;-webkit-overflow-scrolling:touch}
+.evidence-table{width:100%;min-width:680px;border-collapse:collapse;font-size:11px;text-align:left}
+.evidence-table th,.evidence-table td{padding:10px 11px;border-bottom:1px solid #edf1f4;vertical-align:top;white-space:normal;overflow-wrap:anywhere}
+.evidence-table th{position:sticky;top:0;background:#f7f9fb;color:#66788c;font-weight:650;white-space:nowrap}
+.evidence-table td{color:#53677d;line-height:1.5}
+.evidence-table td b{display:block;color:#354b63}
+.evidence-table td small{display:block;max-width:220px;margin-top:4px;color:#8796a6;overflow-wrap:anywhere}
+.evidence-table td a{color:#386a9e;text-decoration:none}
+.evidence-value{min-width:150px;max-width:300px;white-space:pre-wrap;overflow-wrap:anywhere}
+.evidence-modal .form-note{line-height:1.7;text-align:left;margin:12px 0 0}
+@media(max-width:720px){
+  .modal-backdrop{align-items:flex-start;padding:12px 10px;padding-top:max(12px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .modal-backdrop>.evidence-modal{width:100%;max-height:calc(100dvh - 24px);margin:auto 0;padding:16px 13px}
+  .evidence-modal .modal-head h2{font-size:16px;line-height:1.4}
+  .evidence-modal .modal-intro{font-size:11px}
+  .evidence-metrics{gap:8px}
+  .evidence-metrics .metric-card{min-width:0}
+}

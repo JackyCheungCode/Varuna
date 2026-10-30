@@ -640,8 +640,7 @@ const worker = {
   }
   if(url.pathname.startsWith("/api/v1/"))return json(request,{error:"not_implemented",message:"This API capability is scheduled for the next implementation phase.",path:url.pathname},501);
   return json(request,{error:"not_found"},404);
- }
- },
+  },
  async queue(batch,env){
   for(const message of batch.messages){
    const payload=message.body||{};

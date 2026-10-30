@@ -113,7 +113,7 @@ function normalizeProductAttribute(key,value,unit){
  const raw=typeof value==="string"?value.trim():value;
  const rawText=String(value);
  const rawUnit=typeof unit==="string"?unit.trim():null;
- const numericOnly=typeof value==="number"&&Number.isFinite(value)?value:(typeof value==="string"&&/^\s*-?\d+(?:[.,]\d+)?\s*$/.test(value)?Number(value.replace(",",".")):null);
+ const numericOnly=typeof value==="number"&&Number.isFinite(value)?value:(typeof value==="string"&&/^\s*-?\d+(?:[.,]\d+)?\s*$/.test(value)?Number(key==="review_count"?value.replace(/,/g,""):value.replace(",",".")):null);
  let valueNumeric=null,valueText=typeof raw==="string"?raw.slice(0,1000):typeof raw==="boolean"?String(raw):null,canonicalUnit=rawUnit;
  const matchUnit=(pattern)=>rawText.match(pattern);
  if(key==="charging_power"){

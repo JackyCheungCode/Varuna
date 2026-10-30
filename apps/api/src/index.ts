@@ -55,7 +55,7 @@ function safeProviderBase(value){
  if(parsed.protocol!=="https:"||parsed.username||parsed.password||parsed.search||parsed.hash||host==="localhost"||host.endsWith(".local")||privateIPv4.test(host)||host==="0.0.0.0")throw new Error("invalid_provider_base_url");
  return parsed.toString().replace(/\/+$/,"");
 }
-async function generateAI(providerId,credentials,config,input){
+async function generateAI(providerId,credentials,config,input,env){
  const key=credentials.api_key||credentials.apiKey||credentials.key||"";
  const model=input.model||config.model;
  if(!model)throw new Error("model_required");
@@ -75,6 +75,13 @@ async function generateAI(providerId,credentials,config,input){
   const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json"},body:JSON.stringify({model,system,max_tokens:Math.min(Math.max(Number(input.max_output_tokens)||4096,128),8192),messages:[{role:"user",content:prompt}]}),signal:AbortSignal.timeout(60000)});
   if(!response.ok)throw new Error("ai_provider_http_"+response.status);
   const data=await response.json();return{text:(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\n"),usage:data.usage||{},model:data.model||model};
+ }
+ if(providerId==="workers-ai"&&credentials.native_binding===true){
+  if(!env?.AI)throw new Error("workers_ai_binding_unavailable");
+  const result=await env.AI.run(model,{messages:[{role:"system",content:system},{role:"user",content:prompt}],max_tokens:Math.min(Math.max(Number(input.max_output_tokens)||4096,128),8192)});
+  const text=result?.response??result?.output_text??result?.result?.response??"";
+  if(typeof text!=="string"||!text.trim())throw new Error("workers_ai_empty_response");
+  return{text,usage:result?.usage||{},model};
  }
  if(providerId==="workers-ai"){
   const accountId=credentials.account_id;const token=credentials.api_token||credentials.api_key||credentials.key;
@@ -100,7 +107,7 @@ export default {
  async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
-  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.4.0",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY)}});
+  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.4.0",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY),workersAI:Boolean(env.AI)}});
   if(url.pathname==="/api/v1/catalog")return json(request,{domains:domains.map(([id,name,label])=>({id,name,label})),providers:providers.map(([id,name,domain,category,capabilities])=>({id,name,domain,category,capabilities:capabilities.split(","),status:"not_configured"}))});
   if(url.pathname==="/api/v1/providers"&&request.method==="GET"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
@@ -114,11 +121,13 @@ export default {
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
    let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}
    const {workspace_id,provider_id,display_name,credentials,config={}}=body||{};
-   if(typeof workspace_id!=="string"||typeof provider_id!=="string"||typeof display_name!=="string"||!credentials)return json(request,{error:"missing_required_fields"},400);
+   const nativeWorkersAI=provider_id==="workers-ai"&&credentials==="__cloudflare_native_binding__";
+   if(typeof workspace_id!=="string"||typeof provider_id!=="string"||typeof display_name!=="string"||(!credentials&&!nativeWorkersAI))return json(request,{error:"missing_required_fields"},400);
+   if(nativeWorkersAI&&!env.AI)return json(request,{error:"workers_ai_binding_unavailable",message:"This Worker does not have the native AI binding. Deploy the preview Worker with the AI binding enabled."},503);
    const member=await membership(request,env,auth.token,auth.user.id,workspace_id);if(!member||!["owner","admin"].includes(member.role))return json(request,{error:"workspace_admin_required"},403);
    const catalog=await db(request,env,auth.token,"provider_catalog?select=id&id=eq."+encodeURIComponent(provider_id));if(!catalog.ok||!(await catalog.json()).length)return json(request,{error:"unknown_provider"},404);
-   let credentialObject=credentials;
-   if(typeof credentials==="string"){const trimmed=credentials.trim();if(trimmed.startsWith("{")){try{credentialObject=JSON.parse(trimmed);}catch{return json(request,{error:"credentials_json_invalid"},400);}}else credentialObject={api_key:trimmed};}
+   let credentialObject=nativeWorkersAI?{native_binding:true}:credentials;
+   if(typeof credentials==="string"&&!nativeWorkersAI){const trimmed=credentials.trim();if(trimmed.startsWith("{")){try{credentialObject=JSON.parse(trimmed);}catch{return json(request,{error:"credentials_json_invalid"},400);}}else credentialObject={api_key:trimmed};}
    if(!credentialObject||typeof credentialObject!=="object"||Array.isArray(credentialObject))return json(request,{error:"credentials_must_be_object_or_key"},400);
    const serialized=JSON.stringify(credentialObject);if(serialized.length>24000)return json(request,{error:"credentials_too_large"},413);
    const secretRef="provider:"+workspace_id+":"+provider_id;let encrypted;try{encrypted=await encryptSecret(env,serialized);}catch{return json(request,{error:"credential_vault_unavailable"},503);}
@@ -139,7 +148,18 @@ export default {
    const rows=await lookup.json();if(!rows.length||!rows[0].secret_ref)return json(request,{error:"provider_not_configured"},404);
    const encrypted=await env.PROVIDER_SECRETS.get(rows[0].secret_ref);if(!encrypted)return json(request,{error:"provider_secret_missing"},404);
    let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"provider_secret_decryption_failed"},500);}
-   let result;try{result=await testProvider(providerId,credentials);}catch{result={status:"degraded",error:"provider_test_failed",message:"Connection test failed due to a network or provider error."};}
+   let result;try{
+    if(providerId==="workers-ai"&&credentials.native_binding===true){
+     if(!env.AI)result={status:"degraded",error:"workers_ai_binding_unavailable",message:"Native Workers AI binding is unavailable in this Worker deployment."};
+     else{
+      const configQuery=new URLSearchParams({select:"config",workspace_id:"eq."+workspaceId,provider_id:"eq."+providerId,limit:"1"});
+      const configResponse=await db(request,env,auth.token,"provider_connections?"+configQuery.toString());const configRows=configResponse.ok?await configResponse.json():[];
+      const model=configRows[0]?.config?.model||"@cf/zai-org/glm-4.7-flash";
+      await env.AI.run(model,{messages:[{role:"user",content:"Reply with the single word OK."}],max_tokens:8});
+      result={status:"connected",message:"Cloudflare Workers AI native binding and model inference validated.",model};
+     }
+    }else result=await testProvider(providerId,credentials);
+   }catch{result={status:"degraded",error:"provider_test_failed",message:"Connection test failed due to a network or provider error."};}
    const patch={status:result.status,last_tested_at:new Date().toISOString(),last_test_status:result.status,last_error_code:result.error||null};
    await db(request,env,auth.token,"provider_connections?id=eq."+rows[0].id,"PATCH",patch,"return=minimal");
    return json(request,{provider_id:providerId,...result});
@@ -369,7 +389,7 @@ export default {
    const rows=await lookup.json();if(!rows.length||!rows[0].secret_ref)return json(request,{error:"ai_provider_not_configured"},409);
    const encrypted=await env.PROVIDER_SECRETS.get(rows[0].secret_ref);if(!encrypted)return json(request,{error:"ai_provider_secret_missing"},404);
    let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"ai_provider_secret_decryption_failed"},500);}
-   try{const result=await generateAI(provider_id,credentials,rows[0].config||{},{model,task_type,prompt,system_prompt,max_output_tokens});return json(request,{provider_id,model:result.model,text:result.text,usage:result.usage,task_type:task_type||"general"});}
+   try{const result=await generateAI(provider_id,credentials,rows[0].config||{},{model,task_type,prompt,system_prompt,max_output_tokens},env);return json(request,{provider_id,model:result.model,text:result.text,usage:result.usage,task_type:task_type||"general"});}
    catch(error){const code=error instanceof Error?error.message:"ai_generation_failed";return json(request,{error:code.startsWith("ai_provider_http_")?code:"ai_generation_failed"},502);}
   }
   const planMatch=url.pathname.match(/^\/api\/v1\/projects\/([^/]+)\/plan$/);
@@ -398,7 +418,7 @@ export default {
    const systemPrompt="You are Varuna's evidence-led research planning engine. Produce a practical research plan, not market findings. Do not invent data, sales, market sizes, API access, or provider capabilities. Use only provider IDs from this allowed list: "+providers.map(p=>p[0]).join(", ")+". Treat search volume, ranking, views, likes and listing counts only as demand proxies, never as sales. Separate observed evidence requirements from estimates and hypotheses. Output one valid JSON object only, with keys: summary (string), research_questions (array of objects with id,question,decision_relevance,priority), workstreams (array of objects with title,domain_code,research_question,geographies,languages,evidence_requirements,suggested_provider_ids,stop_conditions), coverage_requirements (array), assumptions (array), limitations (array), human_review_questions (array). Use domain codes D01-D12. Include both China and global markets when requested. For USB Cable, distinguish connector, USB protocol, data rate, charging power, e-marker, length, material, certification and test evidence.";
    const prompt="Create a research plan for this project. Project: "+JSON.stringify(project)+"\nDecision intent: "+(project.decision_intent||"Identify evidence-backed product development opportunities.")+"\nScope: "+JSON.stringify(project.scope||{})+"\nReturn 6-12 focused workstreams with clear evidence requirements and stopping rules. No findings or invented metrics.";
    let generated;
-   try{generated=await generateAI(connection.provider_id,credentials,connection.config||{},{model:body?.model,system_prompt:systemPrompt,prompt,max_output_tokens:6000});}
+   try{generated=await generateAI(connection.provider_id,credentials,connection.config||{},{model:body?.model,system_prompt:systemPrompt,prompt,max_output_tokens:6000},env);}
    catch(error){const code=error instanceof Error?error.message:"ai_generation_failed";return json(request,{error:code.startsWith("ai_provider_http_")?code:"ai_plan_generation_failed"},502);}
    let plan;try{plan=parseModelJSON(generated.text);}catch{return json(request,{error:"ai_plan_invalid_json",message:"The selected model did not return valid JSON. Try another model or adjust its configuration."},502);}
    if(!Array.isArray(plan.workstreams)||!Array.isArray(plan.research_questions))return json(request,{error:"ai_plan_schema_invalid"},502);

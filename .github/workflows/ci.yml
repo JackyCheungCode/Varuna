@@ -30,4 +30,4 @@ jobs:
           node --check /tmp/varuna-worker.mjs
       - name: Validate Wrangler configuration JSONC
         run: |
-          node -e "const fs=require('fs'); const text=fs.readFileSync('apps/api/wrangler.jsonc','utf8').replace(/\/\*[\s\S]*?\*\//g,'').replace(/,\s*([}\]])/g,'$1'); JSON.parse(text);"
+          node -e "const fs=require('fs'); const text=fs.readFileSync('apps/api/wrangler.jsonc','utf8').replace(/\/\*[\s\S]*?\*\//g,'').replace(/,\s*([}\]])/g,(_,c)=>c); JSON.parse(text);"

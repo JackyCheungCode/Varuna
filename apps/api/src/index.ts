@@ -685,7 +685,7 @@ const worker = {
      await db(internalRequest,env,token,"research_tasks?id=eq."+taskId,"PATCH",{status:"blocked",error_code:"collector_not_supported",output:{reason:"No execution adapter exists for the selected provider."},updated_at:new Date().toISOString()},"return=minimal");
      await env.PROVIDER_SECRETS.delete(tokenRef);message.ack();continue;
     }
-    const response=await worker.fetch(new Request("https://varuna.internal"+route.path,{method:"POST",headers:{"authorization":"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,project_id:payload.project_id,...route.body})}),env);
+    const response=await worker.fetch(new Request("https://varuna.internal"+route.path,{method:"POST",headers:{"authorization":"Bearer "+token,"content-type":"application/json"},body:JSON.stringify({workspace_id:workspaceId,project_id:payload.project_id,run_id:payload.run_id,...route.body})}),env);
     let result={};try{result=await response.json();}catch{}
     if(!response.ok||result.error){
      const permanent=response.status>=400&&response.status<500&&![408,425,429].includes(response.status);

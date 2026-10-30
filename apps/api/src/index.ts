@@ -122,6 +122,46 @@ export default {
    return json(request,{provider_id:providerId,...result});
   }
 
+
+  if(url.pathname==="/api/v1/collect/youtube"&&request.method==="POST"){
+   const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
+   let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}
+   const {workspace_id,project_id,run_id,query,region_code="US",language="en",max_results=20}=body||{};
+   if(typeof workspace_id!=="string"||typeof project_id!=="string"||typeof query!=="string"||!query.trim()||query.length>300)return json(request,{error:"invalid_collection_request"},400);
+   const member=await membership(request,env,auth.token,auth.user.id,workspace_id);if(!member||!["owner","admin","researcher"].includes(member.role))return json(request,{error:"workspace_researcher_required"},403);
+   const projectQuery=new URLSearchParams({select:"id",id:"eq."+project_id,workspace_id:"eq."+workspace_id,limit:"1"});
+   const projectCheck=await db(request,env,auth.token,"research_projects?"+projectQuery.toString());if(!projectCheck.ok||!(await projectCheck.json()).length)return json(request,{error:"project_not_found"},404);
+   const connectionQuery=new URLSearchParams({select:"secret_ref",workspace_id:"eq."+workspace_id,provider_id:"eq.youtube-data",limit:"1"});
+   const connectionResponse=await db(request,env,auth.token,"provider_connections?"+connectionQuery.toString());if(!connectionResponse.ok)return json(request,{error:"provider_lookup_failed"},502);
+   const connections=await connectionResponse.json();if(!connections.length||!connections[0].secret_ref)return json(request,{error:"youtube_not_configured"},409);
+   const encrypted=await env.PROVIDER_SECRETS.get(connections[0].secret_ref);if(!encrypted)return json(request,{error:"youtube_secret_missing"},404);
+   let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"youtube_secret_decryption_failed"},500);}
+   const apiKey=credentials.api_key||credentials.apiKey||credentials.key;if(!apiKey)return json(request,{error:"youtube_api_key_missing"},400);
+   const count=Math.min(Math.max(Number(max_results)||20,1),50);
+   const searchParams=new URLSearchParams({part:"snippet",type:"video",q:query.trim(),maxResults:String(count),regionCode:String(region_code).toUpperCase(),relevanceLanguage:String(language)});
+   let searchData;
+   try{const response=await fetch("https://youtube.googleapis.com/youtube/v3/search?"+searchParams.toString(),{headers:{"x-goog-api-key":apiKey},signal:AbortSignal.timeout(20000)});if(!response.ok)return json(request,{error:safeProviderError(response.status),message:"YouTube search request failed."},502);searchData=await response.json();}
+   catch{return json(request,{error:"youtube_network_error"},502);}
+   const ids=(searchData.items||[]).map(item=>item.id?.videoId).filter(Boolean);
+   if(!ids.length)return json(request,{collected:0,observations_created:0,limitations:["No matching public videos were returned for this query and region."]});
+   let detailData;
+   try{const params=new URLSearchParams({part:"snippet,statistics,contentDetails",id:ids.join(",")});const response=await fetch("https://youtube.googleapis.com/youtube/v3/videos?"+params.toString(),{headers:{"x-goog-api-key":apiKey},signal:AbortSignal.timeout(20000)});if(!response.ok)return json(request,{error:safeProviderError(response.status),message:"YouTube video detail request failed."},502);detailData=await response.json();}
+   catch{return json(request,{error:"youtube_details_network_error"},502);}
+   const videos=detailData.items||[];
+   const sources=videos.map(video=>({workspace_id,run_id:typeof run_id==="string"?run_id:null,provider_id:"youtube-data",source_name:"YouTube Data API",external_id:video.id,source_url:"https://www.youtube.com/watch?v="+video.id,published_at:video.snippet?.publishedAt||null,geography:String(region_code).toUpperCase(),language:String(language),rights_status:"authorized",retention_policy:"Use and refresh/delete API data in accordance with YouTube API Services Terms and Developer Policies.",provenance:{endpoint:"videos.list",query,region_code,language,search_order:ids.indexOf(video.id)+1,api_version:"v3"},quality:{sampling_method:"YouTube relevance-ranked public video search",sample_size:videos.length,metric_semantics:"Views and engagement are platform signals, not product sales or market size."}}));
+   const sourceInsert=await db(request,env,auth.token,"evidence_sources","POST",sources,"return=representation");
+   if(!sourceInsert.ok)return json(request,{error:"evidence_source_save_failed"},502);
+   const savedSources=await sourceInsert.json();
+   const observations=[];
+   for(let i=0;i<videos.length;i++){
+    const video=videos[i];const source=savedSources[i];const snippet=video.snippet||{};const stats=video.statistics||{};
+    const values=[["title",snippet.title,"text"],["description",snippet.description,"text"],["channel_title",snippet.channelTitle,"text"],["view_count",stats.viewCount,"count"],["like_count",stats.likeCount,"count"],["comment_count",stats.commentCount,"count"],["duration",video.contentDetails?.duration,"ISO-8601 duration"],["category_id",snippet.categoryId,"id"]];
+    for(const [attribute,value,unit] of values){if(value===undefined||value===null)continue;observations.push({workspace_id,source_id:source.id,entity_type:"youtube_video",entity_key:video.id,attribute_key:attribute,raw_value:value,normalized_value:value,unit,metric_type:"observed",geography:String(region_code).toUpperCase(),confidence_rationale:"Direct field returned by YouTube Data API v3; not independently audited."});}
+   }
+   let observationCount=0;
+   if(observations.length){const saved=await db(request,env,auth.token,"evidence_observations","POST",observations,"return=representation");if(saved.ok){const rows=await saved.json();observationCount=rows.length;}}
+   return json(request,{collected:savedSources.length,observations_created:observationCount,provider:"youtube-data",query,region_code:String(region_code).toUpperCase(),language,quota_note:"YouTube search.list consumes substantially more quota than videos.list; monitor Google Cloud API quota.",limitations:["Video views, likes, comments and ranking are engagement proxies, not product sales.","Search results are relevance-ranked and are not a representative sample of all consumers.","YouTube API data retention, refresh and display requirements remain subject to the current YouTube API Services Terms."]});
+  }
   if(url.pathname==="/api/v1/ai/generate"&&request.method==="POST"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
    let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}

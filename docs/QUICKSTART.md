@@ -3,7 +3,7 @@
 ## 1. Open the production application
 
 - Production app: `https://varuna-cu7.pages.dev`
-- API Worker: `https://varuna-api.xg-y.workers.dev` (API v0.5.2)
+- API Worker: `https://varuna-api.xg-y.workers.dev` (API v0.5.3)
 - Supabase project: `dnvcmvfexaucyjlvtvbm` (EU West)
 
 The production release is deployed from the main branch. Preview deployments remain available for future feature branches.
@@ -120,7 +120,7 @@ Do not set `approved_access` to true before approval. Reddit evidence remains ri
 
 Open Research Projects and select **Generate Research Plan**. Varuna uses the configured AI provider to produce research questions, workstreams, source suggestions, coverage requirements and stopping conditions. It stores a research run and workstream tasks in Supabase.
 
-This step creates a research run and publishes eligible workstreams to Cloudflare Queues. A workstream is enqueued only when its suggested/fallback collector is implemented and its provider connection has passed a connection test. Unsupported or unconfigured workstreams are saved as `blocked` with a reason. Queue tasks use retries and atomic claims; repeatedly failing tasks are routed to the dead-letter queue. Check task output and source observations before treating a collection as complete.
+This step creates a research run and publishes eligible workstreams to Cloudflare Queues. Workstreams are split by their target geographies (up to four per workstream). A task is enqueued only when its suggested/fallback collector is implemented, region-eligible and its provider connection has passed a connection test. China tasks do not use eBay, YouTube or Reddit as China-market evidence; use a configured search/keyword source or authorized China data import instead. Unsupported or unconfigured workstreams are saved as `blocked` with a reason. Queue tasks use retries and atomic claims; repeatedly failing tasks are routed to the dead-letter queue. Check task output and source observations before treating a collection as complete.
 
 ## 7. Product extraction and reporting
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { ArrowRight, Layers3, ShieldCheck } from "lucide-react";
 
 type Props = {
@@ -12,7 +12,7 @@ export default function LoginScreen({error,signIn,signUp}:Props) {
   const [password,setPassword] = useState("");
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState("");
-  const submit = async(e:React.FormEvent) => {
+  const submit = async(e:FormEvent) => {
     e.preventDefault(); setBusy(true); setMessage("");
     const ok = mode==="login" ? await signIn(email,password) : await signUp(email,password);
     setBusy(false);

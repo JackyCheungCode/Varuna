@@ -10,12 +10,22 @@ This document separates catalog availability from actual implementation. A provi
 | Anthropic | API key + model ID | Yes | Messages API, research-plan generation |
 | Google Gemini | API key + model ID | Yes | GenerateContent, research-plan generation |
 | DeepSeek | API key + model ID | Yes | OpenAI-compatible chat, research-plan generation |
+| Qwen / DashScope | API key + model ID; optional compatible base URL | No dedicated test yet | OpenAI-compatible chat, research-plan generation |
+| Cloudflare Workers AI | JSON: account_id, api_token, model ID | Yes | Workers AI inference and research-plan generation |
 | Qwen / DashScope | API key + model ID; optional compatible base URL | Save supported; no dedicated test yet | OpenAI-compatible chat and research-plan generation |
 | Cloudflare Workers AI | JSON: account_id, api_token, model ID | Yes | Workers AI inference and research-plan generation |
 | YouTube Data API | API key | Yes | Public video search/details, source records and observations |
 | eBay Browse API | JSON: client_id, client_secret, optional environment | OAuth test | Item search, listing price and product attributes |
 | DataForSEO | JSON: username, password | Yes | Google organic SERP snapshot, rank and page observations |
 | Reddit API | JSON: client_id, client_secret, optional user_agent | OAuth test | Credentials test only; collection adapter pending |
+
+## Additional live collection adapters
+
+- YouTube Data API: search public videos and retrieve metadata/statistics; evidence is stored in the workspace with query, region, language and retention provenance.
+- eBay Browse API: OAuth client-credentials and ranked item search; stores listing price, condition, seller and product attributes. Sandbox/production selection is supported.
+- DataForSEO: authenticated Google organic SERP snapshot by keyword, location and language; stores rank and page observations.
+
+These are first adapters, not full-market coverage. Search results are samples; listing prices are asking prices; engagement metrics are not sales.
 
 ## Catalog-only / access-dependent
 

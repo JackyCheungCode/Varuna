@@ -608,7 +608,7 @@ const worker = {
    const runRows=await runInsert.json();const run=runRows[0];
    const configuredResponse=await db(request,env,auth.token,"provider_connections?"+new URLSearchParams({select:"provider_id,secret_ref,status",workspace_id:"eq."+workspaceId}).toString());
    const configuredRows=configuredResponse.ok?await configuredResponse.json():[];
-   const configuredProviders=new Map(configuredRows.filter(row=>row.secret_ref&&!["degraded","restricted","disabled"].includes(row.status)).map(row=>[row.provider_id,row]));
+   const configuredProviders=new Map(configuredRows.filter(row=>row.secret_ref&&row.status==="connected").map(row=>[row.provider_id,row]));
    const supportedCollectors=new Set(["serpapi","dataforseo","google-ads","ebay-browse","youtube-data","reddit"]);
    const domainFallback={D01:["ebay-browse"],D02:["serpapi","dataforseo","google-ads"],D03:["youtube-data","reddit"],D05:["serpapi"]};
    const taskRows=plan.workstreams.map(w=>{

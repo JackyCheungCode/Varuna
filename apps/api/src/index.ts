@@ -457,8 +457,8 @@ export default {
     const citedId=productEvidenceIds[0]||allEvidenceIds[0];
     const citedObservation=observations.find(o=>o.id===citedId);
     const canonicalUrl=citedObservation?sourceById[citedObservation.source_id]?.source_url||null:null;
-    const existingQ=new URLSearchParams({select:"brand,model_number,gtin,mpn,category,canonical_url,identity_confidence",project_id:"eq."+project_id,identity_key:"eq."+identityKey,limit:"1"});
-    const existingR=await db(request,env,auth.token,"product_entities?"+existingQ.toString());const existingRows=existingR.ok?await existingR.json():[];const previous=existingRows[0]||{};
+    const existingQ=new URLSearchParams({select:"id,brand,model_number,gtin,mpn,category,canonical_url,identity_confidence",project_id:"eq."+project_id,identity_key:"eq."+identityKey,limit:"1"});
+    const existingR=await db(request,env,auth.token,"product_entities?"+existingQ.toString());if(!existingR.ok)continue;const existingRows=await existingR.json();const previous=existingRows[0]||{};
     const entity={workspace_id,project_id,canonical_name:product.canonical_name.trim().slice(0,300),brand:brand||previous.brand||null,model_number:modelNumber||previous.model_number||null,gtin:gtin||previous.gtin||null,mpn:mpn||previous.mpn||null,category:typeof product.category==="string"?product.category.slice(0,160):previous.category||null,canonical_url:canonicalUrl||previous.canonical_url||null,identity_key:identityKey,identity_method:typeof product.identity_method==="string"?product.identity_method.slice(0,60):"normalized_name",identity_confidence:product.identity_confidence!==null&&product.identity_confidence!==undefined&&Number.isFinite(Number(product.identity_confidence))?Math.min(1,Math.max(0,Number(product.identity_confidence))):previous.identity_confidence??0.5,last_observed_at:new Date().toISOString()};
     const upsert=await db(request,env,auth.token,"product_entities?on_conflict=project_id,identity_key","POST",entity,"resolution=merge-duplicates,return=representation");
     if(!upsert.ok)continue;const rows=await upsert.json();const saved=rows[0];if(!saved)continue;
@@ -466,7 +466,10 @@ export default {
     const linkRows=[];
     for(const evidenceId of productEvidenceIds.slice(0,20)){const observation=observations.find(o=>o.id===evidenceId);if(observation)linkRows.push({workspace_id,project_id,product_id:saved.id,evidence_source_id:observation.source_id,evidence_observation_id:evidenceId,relationship:"identified_from",confidence:Math.min(1,Math.max(0,product.identity_confidence!==null&&product.identity_confidence!==undefined&&Number.isFinite(Number(product.identity_confidence))?Number(product.identity_confidence):0.5))});}
     for(const attr of (Array.isArray(product.attributes)?product.attributes:[])){const refs=Array.isArray(attr?.evidence_observation_ids)?attr.evidence_observation_ids.filter(id=>allowedObservationIds.has(id)):[];for(const evidenceId of refs.slice(0,5)){const observation=observations.find(o=>o.id===evidenceId);if(observation)linkRows.push({workspace_id,project_id,product_id:saved.id,evidence_source_id:observation.source_id,evidence_observation_id:evidenceId,relationship:"attribute_support",confidence:Math.min(1,Math.max(0,attr.confidence!==null&&attr.confidence!==undefined&&attr.confidence!==null&&attr.confidence!==undefined&&Number.isFinite(Number(attr.confidence))?Number(attr.confidence):0.5))});}}
-    if(linkRows.length){const lr=await db(request,env,auth.token,"product_evidence_links?on_conflict=product_id,evidence_observation_id,relationship","POST",linkRows,"resolution=merge-duplicates,return=representation");if(lr.ok)evidenceLinkCount+=(await lr.json()).length;}
+    if(!linkRows.length){if(!previous.id)await db(request,env,auth.token,"product_entities?id=eq."+saved.id,"DELETE");continue;}
+    const lr=await db(request,env,auth.token,"product_evidence_links?on_conflict=product_id,evidence_observation_id,relationship","POST",linkRows,"resolution=merge-duplicates,return=representation");
+    if(!lr.ok){if(!previous.id)await db(request,env,auth.token,"product_entities?id=eq."+saved.id,"DELETE");continue;}
+    evidenceLinkCount+=(await lr.json()).length;
     const attrs=Array.isArray(product.attributes)?product.attributes.slice(0,40):[];
     const records=[];
     for(const attr of attrs){

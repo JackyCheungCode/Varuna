@@ -692,7 +692,7 @@ const worker = {
     const input=task.input||{};
     const query=String(input.research_question||input.title||input.query||"product market research").trim().slice(0,300);
     const geographyText=Array.isArray(input.geographies)?input.geographies.join(" "):"";
-    const china=/china/i.test(geographyText);
+    const china=/china|\u4e2d\u56fd|\bcn\b/i.test(geographyText);
     const gl=china?"cn":"us",hl=china?"zh-cn":"en";
     const routes={
      "serpapi":{path:"/api/v1/collect/serpapi",body:{query,engine:task.domain_code==="D01"?"google_shopping":task.domain_code==="D05"?"google_trends":"google",gl,hl,limit:30}},

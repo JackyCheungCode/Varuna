@@ -149,3 +149,23 @@
 .extraction-product{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border-radius:8px;background:var(--surface,#fff);font-size:13px}
 .extraction-product small{color:var(--muted,#667085);text-align:right}
 @media(max-width:640px){.evidence-extraction-panel{align-items:stretch}.evidence-extraction-panel>.primary-btn{width:100%;justify-content:center}.extraction-product{flex-direction:column;gap:3px}.extraction-product small{text-align:left}}
+
+
+.product-catalog-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.product-catalog-controls select{min-width:190px;max-width:280px;padding:10px 12px;border:1px solid var(--line,#dce3ea);border-radius:9px;background:var(--surface,#fff);color:inherit}
+.product-catalog-panel{padding:20px}
+.product-catalog-panel .panel-heading{margin-bottom:16px}
+.product-catalog-panel .panel-heading p{margin:5px 0 0;color:var(--muted,#667085);font-size:13px}
+.product-catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.product-catalog-card{min-width:0;border:1px solid var(--line,#dce3ea);border-radius:12px;padding:15px;background:var(--surface,#fff)}
+.product-catalog-title{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line,#dce3ea)}
+.product-catalog-title>div{min-width:0;display:grid;gap:5px}
+.product-catalog-title b{overflow-wrap:anywhere}
+.product-catalog-title small,.product-catalog-title>span small{display:block;color:var(--muted,#667085);font-size:11px}
+.product-catalog-title>span{text-align:right;white-space:nowrap;font-weight:700}
+.product-attribute-list{display:grid;gap:8px;padding-top:12px}
+.product-attribute-row{display:grid;grid-template-columns:minmax(80px,1fr) minmax(90px,1.3fr) auto;align-items:center;gap:8px;font-size:12px}
+.product-attribute-row span{color:var(--muted,#667085);overflow-wrap:anywhere}
+.product-attribute-row b{overflow-wrap:anywhere}
+.product-attribute-row em{font-style:normal;color:#9a6700;background:#fff7e6;border-radius:5px;padding:3px 5px;font-size:10px;white-space:nowrap}
+@media(max-width:640px){.product-catalog-controls{width:100%}.product-catalog-controls select,.product-catalog-controls button{width:100%;max-width:none}.product-attribute-row{grid-template-columns:1fr 1.2fr}.product-attribute-row em{grid-column:2;justify-self:start}}

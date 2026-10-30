@@ -17,6 +17,7 @@ This document separates catalog availability from actual implementation. A provi
 | YouTube Data API | API key | Yes | Public video search/details, source records and observations |
 | eBay Browse API | JSON: client_id, client_secret, optional environment | OAuth test | Item search, listing price and product attributes |
 | DataForSEO | JSON: username, password | Yes | Google organic SERP snapshot, rank and page observations |
+| SerpApi | API key | Yes (free Account API; no search credit consumed) | Google web search, Shopping, News, Maps and Trends snapshots; normalized evidence records |
 | Google Ads Keyword Planner | JSON: developer_token, client_id, client_secret, refresh_token, customer_id, optional login_customer_id | OAuth/account test | Keyword ideas, average monthly searches, advertising competition and bid ranges through Google Ads API v26 |
 | Reddit API | JSON: client_id, client_secret, user_agent, approved_access:true | OAuth test after explicit approval | Public post search is approval-gated; commercial-use and retention rights remain restricted until confirmed |
 
@@ -25,6 +26,7 @@ This document separates catalog availability from actual implementation. A provi
 - YouTube Data API: search public videos and retrieve metadata/statistics; evidence is stored in the workspace with query, region, language and retention provenance.
 - eBay Browse API: OAuth client-credentials and ranked item search; stores listing price, condition, seller and product attributes. Sandbox/production selection is supported.
 - DataForSEO: authenticated Google organic SERP snapshot by keyword, location and language; stores rank and page observations.
+- SerpApi: validates credentials through its free Account API; collects Google Search, Shopping, News, Maps and Trends engine results through a single Worker adapter, then stores normalized source and observation records with engine, locale, query and search ID provenance.
 
 These are first adapters, not full-market coverage. Search results are samples; listing prices are asking prices; engagement metrics are not sales.
 
@@ -37,7 +39,7 @@ The following providers are registered in the catalog and can be securely config
 - Alibaba.com, 1688, Taobao/Tmall TOP, JD Open Platform, Pinduoduo Open Platform
 - Bing Search, Baidu Marketing
 - X API, Bilibili, TikTok Research API, Xiaohongshu partner access, Douyin Open Platform
-- Google Trends, Similarweb, Semrush, Ahrefs, licensed pricing/promotion intelligence feeds
+- Similarweb, Semrush, Ahrefs, licensed pricing/promotion intelligence feeds
 - Trade/customs datasets, standards/certification registries, company intelligence
 - Authorized review imports, supplier quote imports, first-party business data imports
 
@@ -51,7 +53,8 @@ The browser sends credentials over HTTPS to `varuna-api`. The Worker authenticat
 
 - YouTube views/likes/comments are engagement observations, not product sales.
 - eBay Browse results are best-match listing samples; listing prices are asking prices, not completed transaction prices.
-- DataForSEO SERP results are ranked search snapshots for a specified language/location; ranking is not sales or market share.
+- DataForSEO and SerpApi SERP results are ranked search snapshots for a specified language/location; ranking is not sales or market share.
+- SerpApi Shopping prices are displayed offer snapshots, Maps review metrics are platform signals, and Trends values are normalized interest indices; none is a direct sales measure.
 - All provider data remains subject to the source provider's terms, retention, refresh, display, quota and commercial-use rules.
 
 ## Next connector priorities

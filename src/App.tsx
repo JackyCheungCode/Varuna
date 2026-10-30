@@ -76,7 +76,7 @@ function parseCsvRows(input:string):Array<Record<string,string>>{
   row.push(field);if(row.some(x=>x.trim()!==""))matrix.push(row);
   if(matrix.length<2)return [];
   const headers=matrix.shift()!.map(h=>h.trim());
-  return matrix.slice(0,500).map(values=>{const record:Record<string,string>={};headers.forEach((header,index)=>{const value=(values[index]??"").trim();if(header&&value!=="")record[header]=value;});return record;});
+  return matrix.slice(0,200).map(values=>{const record:Record<string,string>={};headers.forEach((header,index)=>{const value=(values[index]??"").trim();if(header&&value!=="")record[header]=value;});return record;});
 }
 function App() {
   const auth = useAuth();
@@ -226,7 +226,7 @@ function Dashboard({session,supabase,signOut}:{session:Session;supabase:Supabase
   };
   const importCsvEvidence=async(file:File)=>{
     if(!workspaceId||!evidenceProject)return;
-    if(!file.name.toLowerCase().endsWith(".csv"))return notify("目前支持 CSV 文件，请先将 Excel 导出为 CSV UTF-8。");
+    if(!file.name.toLowerCase().endsWith(".csv"))return notify("目前支持 CSV 文件，请先将 Excel 导出为 CSV UTF-8。");\n    if(file.size>5*1024*1024)return notify("单个 CSV 文件不能超过 5 MB，请拆分后分批导入。");
     setImportBusy(true);
     try{
       const rows=parseCsvRows(await file.text());if(!rows.length)throw new Error("CSV 中没有可导入的数据行。");

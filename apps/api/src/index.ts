@@ -138,7 +138,7 @@ const worker = {
  async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
-  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.5.2",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY),workersAI:Boolean(env.AI),researchQueue:Boolean(env.RESEARCH_TASKS)}});
+  if(url.pathname==="/health"||url.pathname==="/api/v1/health")return json(request,{service:"varuna-api",status:"ok",version:"0.5.3",environment:env.VARUNA_ENV||"unconfigured",timestamp:new Date().toISOString(),dependencies:{supabase:Boolean(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),credentialVault:Boolean(env.PROVIDER_SECRETS&&env.CREDENTIAL_ENCRYPTION_KEY),workersAI:Boolean(env.AI),researchQueue:Boolean(env.RESEARCH_TASKS)}});
   if(url.pathname==="/api/v1/catalog")return json(request,{domains:domains.map(([id,name,label])=>({id,name,label})),providers:providers.map(([id,name,domain,category,capabilities])=>({id,name,domain,category,capabilities:capabilities.split(","),status:"not_configured"}))});
   if(url.pathname==="/api/v1/providers"&&request.method==="GET"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
@@ -610,12 +610,19 @@ const worker = {
    const configuredRows=configuredResponse.ok?await configuredResponse.json():[];
    const configuredProviders=new Map(configuredRows.filter(row=>row.secret_ref&&row.status==="connected").map(row=>[row.provider_id,row]));
    const supportedCollectors=new Set(["serpapi","dataforseo","google-ads","ebay-browse","youtube-data","reddit"]);
-   const domainFallback={D01:["ebay-browse"],D02:["serpapi","dataforseo","google-ads"],D03:["youtube-data","reddit"],D05:["serpapi"]};
-   const taskRows=plan.workstreams.map(w=>{
+   const domainFallback={D01:["ebay-browse","serpapi"],D02:["serpapi","dataforseo","google-ads"],D03:["youtube-data","reddit"],D05:["serpapi"]};
+   const defaultGeographies=Array.isArray(project.markets)&&project.markets.includes("CN")&&project.markets.includes("GLOBAL")?["China","United States"]:Array.isArray(project.markets)&&project.markets.includes("CN")?["China"]:["United States"];
+   const taskRows=plan.workstreams.flatMap(w=>{
     const suggested=Array.isArray(w.suggested_provider_ids)?w.suggested_provider_ids:[];
-    const candidates=[...suggested,...(domainFallback[w.domain_code]||[])].filter((id,index,all)=>supportedCollectors.has(id)&&all.indexOf(id)===index);
-    const providerId=candidates.find(id=>configuredProviders.has(id))||null;
-    return {workspace_id:workspaceId,run_id:run.id,domain_code:w.domain_code,provider_id:providerId,task_type:"evidence_discovery",status:providerId?"queued":"blocked",input:w,output:providerId?{}:{reason:"No configured and supported data collector is available for this workstream. Configure an eligible provider or import authorized evidence."}};
+    const geographies=Array.isArray(w.geographies)&&w.geographies.length?w.geographies.slice(0,4).map(String):defaultGeographies;
+    return geographies.map(geography=>{
+     const china=/china|\\u4e2d\\u56fd|\\bcn\\b/i.test(geography);
+     const candidates=[...suggested,...(domainFallback[w.domain_code]||[])].filter((id,index,all)=>supportedCollectors.has(id)&&all.indexOf(id)===index&&!(china&&["ebay-browse","youtube-data","reddit"].includes(id)));
+     const providerId=candidates.find(id=>configuredProviders.has(id))||null;
+     const scopeNote=!Array.isArray(w.geographies)||!w.geographies.length?"United States is used only as a representative international search sample; it does not establish worldwide market coverage.":null;
+     const input={...w,geographies:[geography],market_target:geography,market_scope_note:scopeNote};
+     return {workspace_id:workspaceId,run_id:run.id,domain_code:w.domain_code,provider_id:providerId,task_type:"evidence_discovery",status:providerId?"queued":"blocked",input,output:providerId?{}:{reason:china?"No China-eligible collector is configured for this workstream. Use an approved China marketplace/social/supplier source or import authorized evidence.":"No configured and supported data collector is available for this workstream. Configure an eligible provider or import authorized evidence."}};
+    });
    });
    let tasksCreated=0,tasksEnqueued=0,tasksBlocked=0,tasksFailedToPublish=0;
    if(taskRows.length){
@@ -697,7 +704,7 @@ const worker = {
     const routes={
      "serpapi":{path:"/api/v1/collect/serpapi",body:{query,engine:task.domain_code==="D01"?"google_shopping":task.domain_code==="D05"?"google_trends":"google",gl,hl,limit:30}},
      "dataforseo":{path:"/api/v1/collect/serp",body:{query,location_code:china?2156:2840,language_code:china?"zh_CN":"en"}},
-     "google-ads":{path:"/api/v1/collect/google-ads-keywords",body:{query,location_code:china?2156:2840,language_id:1000}},
+     "google-ads":{path:"/api/v1/collect/google-ads-keywords",body:{query,location_code:china?2156:2840,language_id:china?1017:1000}},
      "ebay-browse":{path:"/api/v1/collect/ebay",body:{query,marketplace_id:"EBAY_US",limit:30}},
      "youtube-data":{path:"/api/v1/collect/youtube",body:{query,region_code:"US",language:"en",max_results:25}},
      "reddit":{path:"/api/v1/collect/reddit",body:{query,limit:25}}

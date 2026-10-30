@@ -653,7 +653,7 @@ const worker = {
     const encryptedToken=await env.PROVIDER_SECRETS.get(tokenRef);
     if(!encryptedToken)throw new Error("task_authorization_expired");
     token=await decryptSecret(env,encryptedToken);
-    const taskQuery=new URLSearchParams({select:"id,run_id,provider_id,status,input,attempt_count",id:"eq."+taskId,workspace_id:"eq."+workspaceId,limit:"1"});
+    const taskQuery=new URLSearchParams({select:"id,run_id,provider_id,domain_code,status,input,attempt_count",id:"eq."+taskId,workspace_id:"eq."+workspaceId,limit:"1"});
     const taskResponse=await db(internalRequest,env,token,"research_tasks?"+taskQuery.toString());
     if(!taskResponse.ok)throw new Error("task_lookup_failed");
     const taskRows=await taskResponse.json();

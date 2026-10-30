@@ -146,6 +146,37 @@ export default {
 
 
 
+
+  if(url.pathname==="/api/v1/collect/reddit"&&request.method==="POST"){
+   const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
+   let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}
+   const {workspace_id,project_id,query,subreddit="",limit=25}=body||{};
+   if(typeof workspace_id!=="string"||typeof project_id!=="string"||typeof query!=="string"||!query.trim()||query.length>300)return json(request,{error:"invalid_collection_request"},400);
+   const member=await membership(request,env,auth.token,auth.user.id,workspace_id);if(!member||!["owner","admin","researcher"].includes(member.role))return json(request,{error:"workspace_researcher_required"},403);
+   const projectQuery=new URLSearchParams({select:"id",id:"eq."+project_id,workspace_id:"eq."+workspace_id,limit:"1"});
+   const projectCheck=await db(request,env,auth.token,"research_projects?"+projectQuery.toString());if(!projectCheck.ok||!(await projectCheck.json()).length)return json(request,{error:"project_not_found"},404);
+   const connectionQuery=new URLSearchParams({select:"secret_ref",workspace_id:"eq."+workspace_id,provider_id:"eq.reddit",limit:"1"});
+   const connectionResponse=await db(request,env,auth.token,"provider_connections?"+connectionQuery.toString());if(!connectionResponse.ok)return json(request,{error:"provider_lookup_failed"},502);
+   const connections=await connectionResponse.json();if(!connections.length||!connections[0].secret_ref)return json(request,{error:"reddit_not_configured"},409);
+   const encrypted=await env.PROVIDER_SECRETS.get(connections[0].secret_ref);if(!encrypted)return json(request,{error:"reddit_secret_missing"},404);
+   let credentials;try{credentials=JSON.parse(await decryptSecret(env,encrypted));}catch{return json(request,{error:"reddit_secret_decryption_failed"},500);}
+   if(!credentials.client_id||!credentials.client_secret||!credentials.user_agent)return json(request,{error:"reddit_oauth_json_required"},400);
+   let tokenData;
+   try{const tokenResponse=await fetch("https://www.reddit.com/api/v1/access_token",{method:"POST",headers:{authorization:"Basic "+btoa(credentials.client_id+":"+credentials.client_secret),"content-type":"application/x-www-form-urlencoded","user-agent":credentials.user_agent},body:"grant_type=client_credentials",signal:AbortSignal.timeout(15000)});if(!tokenResponse.ok)return json(request,{error:safeProviderError(tokenResponse.status),message:"Reddit OAuth failed; verify app type, client credentials and API eligibility."},502);tokenData=await tokenResponse.json();}
+   catch{return json(request,{error:"reddit_oauth_network_error"},502);}
+   const params=new URLSearchParams({q:query.trim(),sort:"relevance",limit:String(Math.min(Math.max(Number(limit)||25,1),50)),type:"link"});
+   let searchData;
+   try{const path=subreddit?"/r/"+encodeURIComponent(String(subreddit).replace(/^r\//,""))+"/search.json":"/search.json";const response=await fetch("https://oauth.reddit.com"+path+"?"+params.toString(),{headers:{authorization:"Bearer "+tokenData.access_token,"user-agent":credentials.user_agent},signal:AbortSignal.timeout(20000)});if(!response.ok)return json(request,{error:safeProviderError(response.status),message:"Reddit search request failed; verify app access and rate limits."},502);searchData=await response.json();}
+   catch{return json(request,{error:"reddit_search_network_error"},502);}
+   const posts=(searchData.data?.children||[]).map(x=>x.data).filter(x=>x&&x.id);
+   if(!posts.length)return json(request,{collected:0,observations_created:0,limitations:["No public Reddit posts were returned for this query and subreddit."]});
+   const sources=posts.map((post,index)=>({workspace_id,project_id,provider_id:"reddit",source_name:"Reddit Data API",external_id:"t3_"+post.id,source_url:post.permalink?"https://www.reddit.com"+post.permalink:null,published_at:post.created_utc?new Date(post.created_utc*1000).toISOString():null,geography:null,language:null,rights_status:"restricted",retention_policy:"Reddit Data API and Developer Terms apply; verify commercial-use rights, retention, refresh and deletion requirements before downstream reuse.",provenance:{endpoint:"/search.json",query,subreddit:subreddit||"all",sort:"relevance",search_order:index+1,post_kind:post.is_self?"self":"link"},quality:{sampling_method:"Relevance-ranked public post search",sample_size:posts.length,metric_semantics:"Votes and comments reflect Reddit platform engagement; not representative population demand or product sales."}}));
+   const sourceInsert=await db(request,env,auth.token,"evidence_sources?on_conflict=workspace_id,provider_id,external_id","POST",sources,"resolution=merge-duplicates,return=representation");if(!sourceInsert.ok)return json(request,{error:"evidence_source_save_failed"},502);
+   const savedSources=await sourceInsert.json();const observations=[];
+   for(let i=0;i<posts.length;i++){const post=posts[i];const source=savedSources[i];const values=[["title",post.title,"text"],["selftext",post.selftext,"text"],["score",post.score,"votes"],["num_comments",post.num_comments,"count"],["upvote_ratio",post.upvote_ratio,"ratio"],["subreddit",post.subreddit,"text"],["domain",post.domain,"domain"],["post_url",post.url,"url"]];for(const [attribute,value,unit] of values){if(value===undefined||value===null)continue;observations.push({workspace_id,source_id:source.id,entity_type:"reddit_post",entity_key:"t3_"+post.id,attribute_key:attribute,raw_value:value,normalized_value:value,unit,metric_type:"observed",confidence_rationale:"Direct public post field returned by Reddit Data API; ranking and engagement are biased platform signals, not sales."});}}
+   let observationCount=0;let partial=false;if(observations.length){const saved=await db(request,env,auth.token,"evidence_observations","POST",observations,"return=representation");if(saved.ok){const rows=await saved.json();observationCount=rows.length;}else partial=true;}
+   return json(request,{partial,collected:savedSources.length,observations_created:observationCount,provider:"reddit",query,subreddit:subreddit||"all",limitations:["Relevance-ranked posts are not a representative sample of all consumers.","Scores and comments are platform engagement, not purchases or sales.","Rights status is restricted pending confirmation of Reddit commercial-use and retention terms."]});
+  }
   if(url.pathname==="/api/v1/collect/google-ads-keywords"&&request.method==="POST"){
    const auth=await authUser(request,env);if(!auth)return json(request,{error:"unauthorized"},401);
    let body;try{body=await request.json();}catch{return json(request,{error:"invalid_json"},400);}

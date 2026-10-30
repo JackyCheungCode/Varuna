@@ -29,6 +29,7 @@ Varuna is not simply an API aggregator or AI report writer. It is a decision sys
 - docs/INTELLIGENCE-SOURCES.md
 - docs/API-INTELLIGENCE-TAXONOMY.md
 - docs/RESEARCH-METHODOLOGY.md
+- docs/PRODUCT-BLUEPRINT.md
 
 ## Product principles
 1. Research is decision-first, multi-source, multilingual, and adaptive to the product and market.
@@ -43,3 +44,25 @@ Varuna is not simply an API aggregator or AI report writer. It is a decision sys
 
 ## Current status
 Product-foundation stage. Research methodology, requirements, source strategy, and architecture are being established before production data collection or deployment.
+
+
+## Application scaffold
+
+- Frontend: React 19 + TypeScript + Vite (`src/`), built to `dist/`.
+- Cloudflare Pages project: `varuna`, connected to this GitHub repository; production branch remains `main` and feature branches are configured for preview deployments.
+- Cloudflare API Worker: `varuna-api`, with health and provider-catalog endpoints.
+- API health: `https://varuna-api.xg-y.workers.dev/api/v1/health`.
+- Supabase: core schema migration `varuna_core_foundation` has been applied with tenant-scoped RLS tables for workspaces, research projects, provider catalog/connections, research runs/tasks, evidence, claims, and audit events.
+
+### Local development
+
+```bash
+npm install
+npm run dev
+npm run typecheck
+npm run build
+```
+
+### Current implementation boundary
+
+The initial UI and infrastructure scaffold are in place. Authentication screens, persistent workspace/project CRUD, encrypted provider credential vault, queue consumers, live source adapters, AI routing, evidence ingestion, and report generation remain implementation work. Do not enter real API keys until the server-side credential vault is enabled. No provider is considered connected until an actual connection test succeeds.

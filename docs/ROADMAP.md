@@ -60,7 +60,7 @@ Exit gate: production readiness review completed; no unresolved critical securit
 
 ## Release-candidate scope
 
-The current MVP delivers authenticated project management, provider configuration, selected live collectors, CSV evidence import, evidence-linked product extraction, sample coverage analytics, evidence-cited AI reports and queued execution for supported connected collectors. It does not claim full coverage of all 12 intelligence domains, automated supplier discovery, complete China marketplace APIs, representative market sizing, or fully automated opportunity scoring. Production MVP 0.5.2 is deployed to Pages and Workers. Final operational acceptance still requires the owner to sign in, confirm production Auth redirects, test at least one eligible data provider, and complete a USB Cable collection-to-report smoke test.
+The current MVP delivers authenticated project management, provider configuration, selected live collectors, CSV evidence import, evidence-linked product extraction, sample coverage analytics, evidence-cited AI reports and queued execution for supported connected collectors. It does not claim full coverage of all 12 intelligence domains, automated supplier discovery, complete China marketplace APIs, representative market sizing, or fully automated opportunity scoring. Production MVP 0.5.3 is deployed to Pages and Workers, including geography-split workstreams and region-eligible collector routing. Final operational acceptance still requires the owner to sign in, confirm production Auth redirects, test at least one eligible data provider, and complete a USB Cable collection-to-report smoke test.
 
 ## Delivery rules
 - Never deploy unreviewed schema changes to production.

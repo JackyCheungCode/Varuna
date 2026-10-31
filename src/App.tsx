@@ -179,6 +179,32 @@ function Dashboard({session,supabase,signOut}:{session:Session;supabase:Supabase
     const model=modelDraft[ai.name]?.trim();if(!model)return notify("请先填写并保存 "+ai.name+" 的模型 ID。");
     setReportBusy(true);
     try{
+      // Ensure the report pipeline has evidence-backed product entities first.
+      const {data:existingProducts,error:productLookupError}=await supabase.from("product_entities")
+        .select("id").eq("workspace_id",workspaceId).eq("project_id",projectId).limit(1);
+      if(productLookupError)throw new Error("检查产品样本失败："+productLookupError.message);
+      if(!existingProducts?.length){
+        notify("正在检查项目证据，并自动提取产品与属性…");
+        const {data:sourceRows,error:sourceLookupError}=await supabase.from("evidence_sources")
+          .select("id").eq("workspace_id",workspaceId).eq("project_id",projectId)
+          .order("created_at",{ascending:false}).limit(50);
+        if(sourceLookupError)throw new Error("读取项目证据来源失败："+sourceLookupError.message);
+        const sourceIds=(sourceRows??[]).map(row=>row.id);
+        if(!sourceIds.length)throw new Error("该项目还没有采集来源。请先执行数据采集或导入授权数据，再生成报告。");
+        const extractionResponse=await fetch(API_BASE+"/api/v1/products/extract",{
+          method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+session.access_token},
+          body:JSON.stringify({workspace_id:workspaceId,project_id:projectId,provider_id:ai.id,model,source_ids:sourceIds})
+        });
+        const extraction=await extractionResponse.json();
+        if(!extractionResponse.ok)throw new Error(extraction.detail||extraction.message||extraction.error||"产品提取失败");
+        const {data:verifiedProducts,error:verifyError}=await supabase.from("product_entities")
+          .select("id").eq("workspace_id",workspaceId).eq("project_id",projectId).limit(1);
+        if(verifyError)throw new Error("产品提取后验证失败："+verifyError.message);
+        if(!verifiedProducts?.length){
+          throw new Error("已分析 "+(extraction.observation_count??0)+" 条证据，但 AI 没有识别出具备可靠身份依据的独立产品。当前证据主要是搜索摘要，不能据此虚构商品目录。请先补充商品详情/Shopping 商品数据或 CSV 商品清单，再重新生成报告。");
+        }
+        notify("产品提取完成："+(extraction.products_saved??verifiedProducts.length)+" 个产品、"+(extraction.attribute_values_saved??0)+" 条属性，正在生成报告…");
+      }
       const response=await fetch(API_BASE+"/api/v1/reports/generate",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+session.access_token},body:JSON.stringify({workspace_id:workspaceId,project_id:projectId,provider_id:ai.id,model})});
       const result=await response.json();if(!response.ok)throw new Error(result.message||result.error||"report_generation_failed");
       setReportResult(result);await loadResearchReports(projectId);notify("研究报告已生成并保存。");

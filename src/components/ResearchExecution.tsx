@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { Activity, AlertCircle, CheckCircle2, Clock3, Database, ExternalLink, RefreshCw } from "lucide-react";
+import { AlertCircle, Database, ExternalLink, RefreshCw } from "lucide-react";
 
 type Project = { id: string; name: string };
 type Run = {
@@ -134,7 +134,7 @@ export default function ResearchExecution({ supabase, session, workspaceId, proj
         <div className="research-execution-toolbar"><b>{progress}% 完成</b><span className="research-execution-muted">{counts.done}/{selectedTasks.length} 项终态 · {counts.active} 项执行中</span></div>
         <div className="research-execution-muted" style={{marginTop:8}}>成功 {counts.succeeded} · 部分完成 {counts.partial} · 受阻 {counts.blocked} · 失败 {counts.failed}</div>
         {selectedTasks.length ? selectedTasks.map(task => <div className="research-execution-task" key={task.id}>
-          <div><b>{task.domain_code || "研究任务"} · {task.provider_id || "未匹配数据源"}</b><small>{task.task_type} · 尝试 {task.attempt_count} 次{task.error_code ? " · " + task.error_code : ""}</small>{task.output?.reason && <small>{String(task.output.reason)}</small>}</div>
+          <div><b>{task.domain_code || "研究任务"} · {task.provider_id || "未匹配数据源"}</b><small>{task.task_type} · 尝试 {task.attempt_count} 次{task.error_code ? " · " + task.error_code : ""}</small>{typeof task.output?.reason === "string" && <small>{task.output.reason}</small>}</div>
           <span className={"research-execution-pill " + (task.status === "succeeded" ? "good" : task.status === "failed" || task.status === "blocked" ? "bad" : "")}>{statusLabel[task.status] || task.status}</span>
         </div>) : <div className="research-execution-empty">该研究运行尚未生成任务清单。</div>}
       </> : <div className="research-execution-empty">{loading ? "正在读取研究运行…" : "数据库中尚无研究运行。请先在研究向导中生成研究计划；生成成功后，这里会自动显示任务和进度。"}</div>}
